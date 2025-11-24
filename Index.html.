@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Asistencia QR v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #carnet-preview, #carnet-preview * { visibility: visible; }
+            #carnet-preview {
+                position: absolute;
+                left: 0; top: 0; margin: 0;
+                border: 1px solid #ccc;
+                -webkit-print-color-adjust: exact; /* Para que salgan los colores de fondo */
+                print-color-adjust: exact;
+            }
+        }
+        .animate-scan { animation: scan-line 2s infinite linear; }
+        @keyframes scan-line {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+        /* Estilo para el input de archivo */
+        .file-upload {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s;
+        }
+        .file-upload:hover { border-color: #4f46e5; background-color: #eef2ff; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans text-slate-800">
+
+    <nav class="bg-indigo-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <span class="font-bold text-lg"><i class="fas fa-qrcode mr-2"></i>QR Master v2</span>
+                <div class="flex space-x-2 text-sm">
+                    <button onclick="showTab('create')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-id-card"></i> Crear</button>
+                    <button onclick="showTab('scan')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-camera"></i> Escanear</button>
+                    <button onclick="showTab('list')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-list"></i> Lista</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto p-4">
+
+        <!-- SECCIÓN CREAR -->
+        <section id="tab-create" class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-xl font-bold mb-4 text-indigo-700">Diseñador de Carnet</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
+                    <!-- Formulario -->
+                    <div class="space-y-4">
+                        <!-- Campo Foto -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Foto de Perfil</label>
+                            <label class="file-upload w-full h-32 flex flex-col items-center justify-center rounded cursor-pointer bg-slate-50 text-slate-400">
+                                <i class="fas fa-cloud-upload-alt text-2xl mb-1"></i>
+                                <span class="text-xs">Clic para subir foto</span>
+                                <input type="file" id="input-photo" accept="image/*" class="hidden" onchange="previewPhoto(this)">
+                            </label>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Nombre Completo</label>
+                            <input type="text" id="input-name" placeholder="Ej: Ana López" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">ID / Cédula</label>
+                            <input type="text" id="input-id" placeholder="Ej: 12345678" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Cargo</label>
+                            <select id="input-role" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="Empleado">Empleado</option>
+                                <option value="Estudiante">Estudiante</option>
+                                <option value="Director">Director</option>
+                                <option value="Visitante">Visitante</option>
+                            </select>
+                        </div>
+                        <button onclick="generateCarnet()" class="w-full bg-indigo-600 text-white py-3 rounded hover:bg-indigo-700 transition font-bold shadow-lg mt-4">
+                            <i class="fas fa-magic mr-2"></i> Generar Carnet
+                        </button>
+                    </div>
+
+                    <!-- Vista Previa del Carnet -->
+                    <div class="flex flex-col items-center">
+                        <div id="carnet-preview" class="hidden w-[320px] h-[500px] bg-white rounded-xl shadow-2xl overflow-hidden relative border border-slate-200 flex-col">
+                            <!-- Diseño de fondo abstracto -->
+                            <div class="absolute top-0 w-full h-32 bg-indigo-600 rounded-b-[50%] scale-x-150"></div>
+                            
+                            <!-- Contenido -->
+                            <div class="relative z-10 flex flex-col items-center h-full pt-8">
+                                <h3 class="text-white font-bold text-lg tracking-widest mb-4">CREDENCIAL</h3>
+                                
+                                <!-- Foto de perfil circular -->
+                                <div class="w-32 h-32 rounded-full border-4 border-white bg-slate-200 shadow-lg overflow-hidden flex items-center justify-center mb-3">
+                                    <img id="card-photo-img" src="" class="w-full h-full object-cover hidden">
+                                    <i id="card-photo-icon" class="fas fa-user text-4xl text-slate-400"></i>
+                                </div>
+
+                                <h2 id="card-name" class="text-xl font-bold text-slate-800 leading-tight px-4 text-center">Nombre</h2>
+                                <p id="card-role" class="text-indigo-600 font-bold text-sm mt-1 uppercase">CARGO</p>
+
+                                <div class="mt-auto mb-6 bg-white p-2 rounded-lg shadow-sm border border-slate-100">
+                                    <canvas id="qr-canvas"></canvas>
+                                </div>
+                                <p id="card-id" class="text-xs text-slate-400 font-mono mb-4">ID: 00000000</p>
+                            </div>
+                        </div>
+                        
+                        <div id="preview-placeholder" class="text-slate-400 text-center py-10">
+                            <i class="fas fa-paint-brush text-4xl mb-3"></i>
+                            <p>Rellena los datos para ver la magia</p>
+                        </div>
+
+                        <button id="btn-print" onclick="window.print()" class="hidden mt-6 text-indigo-600 hover:text-indigo-800 font-bold border border-indigo-600 px-6 py-2 rounded-full hover:bg-indigo-50 transition">
+                            <i class="fas fa-print mr-2"></i> Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN ESCANEAR -->
+        <section id="tab-scan" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md max-w-lg mx-auto">
+                <h2 class="text-xl font-bold mb-4 text-center text-indigo-700">Punto de Asistencia</h2>
+                <div class="relative bg-black rounded-lg overflow-hidden aspect-square mb-4 shadow-inner">
+                    <div id="reader" class="w-full h-full"></div>
+                    <div id="scan-overlay" class="absolute inset-0 pointer-events-none hidden border-2 border-indigo-500/50">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)] animate-scan"></div>
+                    </div>
+                </div>
+                <div class="flex justify-center space-x-4 mb-4">
+                    <button onclick="startScanner()" class="bg-emerald-600 text-white px-6 py-2 rounded shadow hover:bg-emerald-700 transition font-bold"><i class="fas fa-power-off mr-2"></i> INICIAR</button>
+                    <button onclick="stopScanner()" class="bg-red-500 text-white px-6 py-2 rounded shadow hover:bg-red-600 transition font-bold"><i class="fas fa-stop mr-2"></i> PARAR</button>
+                </div>
+                <div id="last-scan-info" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
+                    <div class="text-emerald-800 font-bold text-lg"><i class="fas fa-check-circle"></i> ¡Bienvenido!</div>
+                    <div id="scan-result-name" class="text-slate-800 font-bold text-xl mt-1">Nombre</div>
+                    <div id="scan-result-time" class="text-slate-500 text-sm">Hora</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN LISTA -->
+        <section id="tab-list" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-indigo-700">Registros</h2>
+                    <div class="space-x-2">
+                         <button onclick="exportToCSV()" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">Excel</button>
+                        <button onclick="clearHistory()" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm hover:bg-red-200 transition">Borrar</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-sm uppercase">
+                                <th class="p-3">Hora</th>
+                                <th class="p-3">Nombre</th>
+                                <th class="p-3">Rol</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-tbody" class="text-sm text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- LÓGICA DE FOTO (FileReader) ---
+        let currentPhotoBase64 = null;
+
+        function previewPhoto(input) {
+            const file = input.files[0];
+            if (file) {
+                // Validación de tamaño (Max 2MB para no bloquear navegador)
+                if(file.size > 2 * 1024 * 1024) {
+                    alert("La imagen es muy pesada. Intenta con una menor a 2MB.");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentPhotoBase64 = e.target.result; // Aquí convertimos la imagen a texto Base64
+                    // Solo mostramos un mensaje de "Cargada", la previsualización real ocurre al dar "Generar"
+                    input.parentElement.querySelector('span').textContent = "Foto cargada: " + file.name;
+                    input.parentElement.classList.add('border-indigo-500', 'bg-indigo-50');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // --- SISTEMA ---
+        let html5QrcodeScanner = null;
+        let attendanceData = JSON.parse(localStorage.getItem('attendance_log_v2')) || [];
+        
+        function showTab(tabId) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            if (tabId === 'list') renderAttendanceTable();
+            if (tabId !== 'scan' && html5QrcodeScanner) stopScanner();
+        }
+
+        function generateCarnet() {
+            const name = document.getElementById('input-name').value.trim();
+            const id = document.getElementById('input-id').value.trim();
+            const role = document.getElementById('input-role').value;
+
+            if (!name || !id) { alert("Faltan datos (Nombre o ID)"); return; }
+
+            // 1. Configurar datos visuales
+            document.getElementById('card-name').textContent = name;
+            document.getElementById('card-id').textContent = `ID: ${id}`;
+            document.getElementById('card-role').textContent = role;
+
+            // 2. Configurar la foto
+            const imgElement = document.getElementById('card-photo-img');
+            const iconElement = document.getElementById('card-photo-icon');
+            
+            if (currentPhotoBase64) {
+                imgElement.src = currentPhotoBase64;
+                imgElement.classList.remove('hidden');
+                iconElement.classList.add('hidden');
+            } else {
+                imgElement.classList.add('hidden');
+                iconElement.classList.remove('hidden');
+            }
+
+            // 3. Generar QR (¡SIN LA FOTO ADENTRO!)
+            // Solo guardamos los datos de texto ligeros
+            const qrData = JSON.stringify({ id, name, role, type: 'ACCESS_V2' });
+            
+            new QRious({
+                element: document.getElementById('qr-canvas'),
+                value: qrData,
+                size: 120,
+                level: 'H'
+            });
+
+            // 4. Mostrar
+            document.getElementById('preview-placeholder').classList.add('hidden');
+            document.getElementById('carnet-preview').classList.remove('hidden');
+            document.getElementById('carnet-preview').classList.add('flex');
+            document.getElementById('btn-print').classList.remove('hidden');
+        }
+
+        // --- ESCÁNER ---
+        function startScanner() {
+            document.getElementById('last-scan-info').classList.add('hidden');
+            if (html5QrcodeScanner) return;
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    handleScanSuccess(decodedText);
+                },
+                () => {}
+            ).then(() => {
+                document.getElementById('scan-overlay').classList.remove('hidden');
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                    document.getElementById('scan-overlay').classList.add('hidden');
+                });
+            }
+        }
+
+        function handleScanSuccess(text) {
+            if(html5QrcodeScanner) html5QrcodeScanner.pause(true);
+
+            try {
+                const data = JSON.parse(text);
+                if (data.type !== 'ACCESS_V2') throw new Error("QR antiguo o inválido");
+
+                // Registrar
+                const now = new Date();
+                const newEntry = {
+                    id: data.id,
+                    name: data.name,
+                    role: data.role,
+                    timestamp: now.toISOString(),
+                    displayTime: now.toLocaleTimeString()
+                };
+
+                // Evitar doble escaneo rápido (30 seg)
+                if (attendanceData.length > 0 && attendanceData[0].id === newEntry.id) {
+                    const diff = now - new Date(attendanceData[0].timestamp);
+                    if (diff < 30000) throw new Error("Ya registrado recientemente");
+                }
+
+                attendanceData.unshift(newEntry);
+                localStorage.setItem('attendance_log_v2', JSON.stringify(attendanceData));
+
+                // Feedback
+                document.getElementById('scan-result-name').textContent = data.name;
+                document.getElementById('scan-result-time').textContent = newEntry.displayTime;
+                document.getElementById('last-scan-info').classList.remove('hidden');
+                
+                // Sonido
+                playBeep();
+
+                setTimeout(() => {
+                    if(html5QrcodeScanner) html5QrcodeScanner.resume();
+                    document.getElementById('last-scan-info').classList.add('hidden');
+                }, 2000);
+
+            } catch (e) {
+                console.log(e);
+                alert("Error: " + (e.message || "QR Inválido"));
+                setTimeout(() => { if(html5QrcodeScanner) html5QrcodeScanner.resume(); }, 1000);
+            }
+        }
+
+        // --- EXPORTAR Y UTILIDADES ---
+        function renderAttendanceTable() {
+            const tbody = document.getElementById('attendance-tbody');
+            tbody.innerHTML = attendanceData.length ? '' : '<tr><td colspan="3" class="p-4 text-center text-slate-400">Sin registros</td></tr>';
+            attendanceData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b";
+                tr.innerHTML = `<td class="p-3 font-mono text-xs">${row.displayTime}</td><td class="p-3">${row.name}</td><td class="p-3 text-xs text-indigo-600 uppercase">${row.role}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function clearHistory() {
+            if(confirm("¿Borrar todo?")) {
+                attendanceData = [];
+                localStorage.removeItem('attendance_log_v2');
+                renderAttendanceTable();
+            }
+        }
+        
+        function exportToCSV() {
+            let csv = "Fecha,Nombre,ID,Rol\n" + attendanceData.map(row => `${row.timestamp},"${row.name}",${row.id},${row.role}`).join("\n");
+            const link = document.createElement("a");
+            link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+            link.download = "asistencia.csv";
+            link.click();
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            o.type = "sine"; o.frequency.value = 880; g.gain.value = 0.1;
+            o.start(); o.stop(audioCtx.currentTime + 0.1);
+        }
+        
+        renderAttendanceTable();
+    </script>
+</body>
+</html>
+
+
