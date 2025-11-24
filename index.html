@@ -3,13 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Asistencia QR v2</title>
+    <title>Gestor de Asistencia QR v3.0</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librerías QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Librería para convertir HTML a JPG/Canvas (Requerido para la descarga) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Iconos -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
+        /* Estilos específicos para impresión de carnets */
         @media print {
             body * { visibility: hidden; }
             #carnet-preview, #carnet-preview * { visibility: visible; }
@@ -17,10 +23,12 @@
                 position: absolute;
                 left: 0; top: 0; margin: 0;
                 border: 1px solid #ccc;
-                -webkit-print-color-adjust: exact; /* Para que salgan los colores de fondo */
+                /* Permite que los colores se impriman (crucial para un carnet) */
+                -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
         }
+        /* Animación para el escáner */
         .animate-scan { animation: scan-line 2s infinite linear; }
         @keyframes scan-line {
             0% { top: 0; }
@@ -37,165 +45,269 @@
 </head>
 <body class="bg-slate-100 min-h-screen font-sans text-slate-800">
 
-    <nav class="bg-indigo-700 text-white shadow-lg sticky top-0 z-50">
-        <div class="max-w-4xl mx-auto px-4">
-            <div class="flex justify-between items-center h-16">
-                <span class="font-bold text-lg"><i class="fas fa-qrcode mr-2"></i>QR Master v2</span>
-                <div class="flex space-x-2 text-sm">
-                    <button onclick="showTab('create')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-id-card"></i> Crear</button>
-                    <button onclick="showTab('scan')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-camera"></i> Escanear</button>
-                    <button onclick="showTab('list')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-list"></i> Lista</button>
+    <!-- MODAL DE LOGIN (SE MUESTRA PRIMERO) -->
+    <div id="login-modal" class="fixed inset-0 bg-slate-900 bg-opacity-90 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full space-y-6">
+            <h2 class="text-2xl font-bold text-center text-indigo-700"><i class="fas fa-lock mr-2"></i> Acceso Requerido</h2>
+            <div id="login-error" class="hidden bg-red-100 text-red-700 p-3 rounded text-sm text-center font-medium">
+                Usuario o contraseña incorrectos.
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Usuario</label>
+                <!-- Usuario por defecto: admin -->
+                <input type="text" id="login-user" value="admin" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Contraseña</label>
+                <!-- Contraseña por defecto: 1234 -->
+                <input type="password" id="login-password" value="1234" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <button onclick="login()" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-bold shadow-lg">
+                <i class="fas fa-sign-in-alt mr-2"></i> Entrar al Panel
+            </button>
+            <p class="text-xs text-center text-slate-400">
+                U: admin / C: 1234 (Modifica estas credenciales en el código JS si deseas más seguridad).
+            </p>
+        </div>
+    </div>
+
+
+    <!-- Contenido de la Aplicación (Oculto hasta hacer Login) -->
+    <div id="app-content" class="hidden">
+        <!-- Navegación -->
+        <nav class="bg-indigo-700 text-white shadow-lg sticky top-0 z-50">
+            <div class="max-w-4xl mx-auto px-4">
+                <div class="flex justify-between items-center h-16">
+                    <span class="font-bold text-lg"><i class="fas fa-qrcode mr-2"></i>QR Master v3.0</span>
+                    <div class="flex space-x-2 text-sm">
+                        <button onclick="showTab('create')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-id-card"></i> Crear</button>
+                        <button onclick="showTab('scan')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-camera"></i> Escanear</button>
+                        <button onclick="showTab('list')" class="hover:bg-indigo-600 transition px-3 py-1 rounded-full"><i class="fas fa-list"></i> Lista</button>
+                    </div>
                 </div>
             </div>
-        </div>
-    </nav>
+        </nav>
 
-    <main class="max-w-4xl mx-auto p-4">
+        <!-- Contenido Principal -->
+        <main class="max-w-4xl mx-auto p-4">
 
-        <!-- SECCIÓN CREAR -->
-        <section id="tab-create" class="space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <h2 class="text-xl font-bold mb-4 text-indigo-700">Diseñador de Carnet</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    
-                    <!-- Formulario -->
-                    <div class="space-y-4">
-                        <!-- Campo Foto -->
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Foto de Perfil</label>
-                            <label class="file-upload w-full h-32 flex flex-col items-center justify-center rounded cursor-pointer bg-slate-50 text-slate-400">
-                                <i class="fas fa-cloud-upload-alt text-2xl mb-1"></i>
-                                <span class="text-xs">Clic para subir foto</span>
-                                <input type="file" id="input-photo" accept="image/*" class="hidden" onchange="previewPhoto(this)">
-                            </label>
+            <!-- SECCIÓN 1: CREAR CARNET -->
+            <section id="tab-create" class="space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-xl font-bold mb-4 text-indigo-700">Diseñador de Carnet</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        
+                        <!-- Formulario -->
+                        <div class="space-y-4">
+                            <!-- Campo Foto -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-1">Foto de Perfil</label>
+                                <label class="file-upload w-full h-24 flex flex-col items-center justify-center rounded cursor-pointer bg-slate-50 text-slate-400">
+                                    <i class="fas fa-cloud-upload-alt text-xl mb-1"></i>
+                                    <span class="text-xs">Clic para subir foto (Max 2MB)</span>
+                                    <input type="file" id="input-photo" accept="image/*" class="hidden" onchange="previewPhoto(this)">
+                                </label>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-1">Nombre Completo</label>
+                                <input type="text" id="input-name" placeholder="Ej: Ana López" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-1">ID / Cédula</label>
+                                <input type="text" id="input-id" placeholder="Ej: 12345678" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-1">Cargo</label>
+                                <select id="input-role" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <option value="Empleado">Empleado</option>
+                                    <option value="Estudiante">Estudiante</option>
+                                    <option value="Visitante">Visitante</option>
+                                    <option value="Administrativo">Administrativo</option>
+                                </select>
+                            </div>
+                            <!-- Nuevo Campo: Residencia -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-1">Residencia / Ciudad</label>
+                                <input type="text" id="input-residence" placeholder="Ej: Bogotá, Colombia" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                             <!-- Nuevo Campo: Vencimiento -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-1">Fecha de Vencimiento</label>
+                                <input type="date" id="input-expiry" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <button onclick="generateCarnet()" class="w-full bg-indigo-600 text-white py-3 rounded hover:bg-indigo-700 transition font-bold shadow-lg mt-4">
+                                <i class="fas fa-magic mr-2"></i> Generar Carnet
+                            </button>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Nombre Completo</label>
-                            <input type="text" id="input-name" placeholder="Ej: Ana López" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">ID / Cédula</label>
-                            <input type="text" id="input-id" placeholder="Ej: 12345678" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Cargo</label>
-                            <select id="input-role" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none">
-                                <option value="Empleado">Empleado</option>
-                                <option value="Estudiante">Estudiante</option>
-                                <option value="Director">Director</option>
-                                <option value="Visitante">Visitante</option>
-                            </select>
-                        </div>
-                        <button onclick="generateCarnet()" class="w-full bg-indigo-600 text-white py-3 rounded hover:bg-indigo-700 transition font-bold shadow-lg mt-4">
-                            <i class="fas fa-magic mr-2"></i> Generar Carnet
-                        </button>
-                    </div>
+                        <!-- Vista Previa del Carnet -->
+                        <div class="flex flex-col items-center">
+                            <div id="carnet-container" class="relative">
+                                <!-- La Vista Previa Real (ID: carnet-preview) para la descarga -->
+                                <div id="carnet-preview" class="hidden w-[320px] h-[500px] bg-white rounded-xl shadow-2xl overflow-hidden relative border border-slate-200 flex-col">
+                                    <!-- Diseño de fondo abstracto -->
+                                    <div class="absolute top-0 w-full h-32 bg-indigo-700 rounded-b-[50%] scale-x-150"></div>
+                                    
+                                    <!-- Contenido -->
+                                    <div class="relative z-10 flex flex-col items-center h-full pt-8">
+                                        <h3 class="text-white font-bold text-lg tracking-widest mb-4">IDENTIFICACIÓN OFICIAL</h3>
+                                        
+                                        <!-- Foto de perfil circular -->
+                                        <div class="w-32 h-32 rounded-full border-4 border-white bg-slate-200 shadow-lg overflow-hidden flex items-center justify-center mb-3">
+                                            <img id="card-photo-img" src="" class="w-full h-full object-cover hidden">
+                                            <i id="card-photo-icon" class="fas fa-user text-4xl text-slate-400"></i>
+                                        </div>
 
-                    <!-- Vista Previa del Carnet -->
-                    <div class="flex flex-col items-center">
-                        <div id="carnet-preview" class="hidden w-[320px] h-[500px] bg-white rounded-xl shadow-2xl overflow-hidden relative border border-slate-200 flex-col">
-                            <!-- Diseño de fondo abstracto -->
-                            <div class="absolute top-0 w-full h-32 bg-indigo-600 rounded-b-[50%] scale-x-150"></div>
+                                        <h2 id="card-name" class="text-xl font-bold text-slate-800 leading-tight px-4 text-center">Nombre</h2>
+                                        <p id="card-role" class="text-indigo-600 font-bold text-sm mt-1 uppercase">CARGO</p>
+
+                                        <!-- Nuevos Campos en la Tarjeta -->
+                                        <div class="text-center text-sm mt-3 space-y-1">
+                                            <p id="card-residence" class="text-slate-700"><i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i>Ciudad</p>
+                                            <p id="card-id" class="text-slate-700 font-mono"><i class="fas fa-fingerprint text-indigo-500 mr-2"></i>ID: 00000000</p>
+                                        </div>
+                                        
+
+                                        <div class="mt-auto mb-4 bg-white p-2 rounded-lg shadow-sm border border-slate-100">
+                                            <canvas id="qr-canvas"></canvas>
+                                        </div>
+                                        
+                                        <!-- Campo Vencimiento -->
+                                        <p id="card-expiry" class="text-xs text-red-500 font-medium mb-4 uppercase">VENCE: DD/MM/AAAA</p>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <!-- Contenido -->
-                            <div class="relative z-10 flex flex-col items-center h-full pt-8">
-                                <h3 class="text-white font-bold text-lg tracking-widest mb-4">CREDENCIAL</h3>
-                                
-                                <!-- Foto de perfil circular -->
-                                <div class="w-32 h-32 rounded-full border-4 border-white bg-slate-200 shadow-lg overflow-hidden flex items-center justify-center mb-3">
-                                    <img id="card-photo-img" src="" class="w-full h-full object-cover hidden">
-                                    <i id="card-photo-icon" class="fas fa-user text-4xl text-slate-400"></i>
-                                </div>
+                            <div id="preview-placeholder" class="text-slate-400 text-center py-10">
+                                <i class="fas fa-paint-brush text-4xl mb-3"></i>
+                                <p>Rellena los datos para ver la magia</p>
+                            </div>
 
-                                <h2 id="card-name" class="text-xl font-bold text-slate-800 leading-tight px-4 text-center">Nombre</h2>
-                                <p id="card-role" class="text-indigo-600 font-bold text-sm mt-1 uppercase">CARGO</p>
-
-                                <div class="mt-auto mb-6 bg-white p-2 rounded-lg shadow-sm border border-slate-100">
-                                    <canvas id="qr-canvas"></canvas>
-                                </div>
-                                <p id="card-id" class="text-xs text-slate-400 font-mono mb-4">ID: 00000000</p>
+                            <!-- Botones de Acción -->
+                            <div id="card-actions" class="hidden mt-6 flex space-x-4">
+                                <button id="btn-print" onclick="window.print()" class="text-indigo-600 hover:text-indigo-800 font-bold border border-indigo-600 px-4 py-2 rounded-full hover:bg-indigo-50 transition">
+                                    <i class="fas fa-print mr-2"></i> Imprimir PDF
+                                </button>
+                                <!-- Botón para Descargar JPG -->
+                                <button id="btn-download" onclick="downloadCarnet()" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-full hover:bg-emerald-700 transition shadow-md">
+                                    <i class="fas fa-download mr-2"></i> Descargar JPG
+                                </button>
                             </div>
                         </div>
-                        
-                        <div id="preview-placeholder" class="text-slate-400 text-center py-10">
-                            <i class="fas fa-paint-brush text-4xl mb-3"></i>
-                            <p>Rellena los datos para ver la magia</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 2: ESCANEAR -->
+            <section id="tab-scan" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-md max-w-lg mx-auto">
+                    <h2 class="text-xl font-bold mb-4 text-center text-indigo-700">Punto de Asistencia</h2>
+                    <div class="relative bg-black rounded-lg overflow-hidden aspect-square mb-4 shadow-inner">
+                        <div id="reader" class="w-full h-full"></div>
+                        <div id="scan-overlay" class="absolute inset-0 pointer-events-none hidden border-2 border-indigo-500/50">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)] animate-scan"></div>
                         </div>
+                    </div>
+                    <div class="flex justify-center space-x-4 mb-4">
+                        <button onclick="startScanner()" class="bg-emerald-600 text-white px-6 py-2 rounded shadow hover:bg-emerald-700 transition font-bold"><i class="fas fa-power-off mr-2"></i> INICIAR</button>
+                        <button onclick="stopScanner()" class="bg-red-500 text-white px-6 py-2 rounded shadow hover:bg-red-600 transition font-bold"><i class="fas fa-stop mr-2"></i> PARAR</button>
+                    </div>
+                    
+                    <!-- Mensaje de Éxito al Escanear -->
+                    <div id="scan-success-info" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center transition duration-500">
+                        <div class="text-emerald-800 font-bold text-lg"><i class="fas fa-check-circle"></i> ¡Bienvenido!</div>
+                        <div id="scan-result-name" class="text-slate-800 font-bold text-xl mt-1">Nombre</div>
+                        <div id="scan-result-time" class="text-slate-500 text-sm">Hora</div>
+                    </div>
 
-                        <button id="btn-print" onclick="window.print()" class="hidden mt-6 text-indigo-600 hover:text-indigo-800 font-bold border border-indigo-600 px-6 py-2 rounded-full hover:bg-indigo-50 transition">
-                            <i class="fas fa-print mr-2"></i> Imprimir
-                        </button>
+                    <!-- Mensaje de Ya Marcó / Error -->
+                    <div id="scan-warning-info" class="hidden bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-center transition duration-500">
+                        <div class="text-yellow-800 font-bold text-lg"><i class="fas fa-exclamation-triangle"></i> ¡Ya Marcó!</div>
+                        <div id="warning-message" class="text-slate-700 font-medium mt-1"></div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- SECCIÓN 3: LISTA DE ASISTENCIA -->
+            <section id="tab-list" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-indigo-700">Registros de Asistencia</h2>
+                        <div class="space-x-2">
+                            <button onclick="exportToCSV()" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">Excel</button>
+                            <button onclick="clearHistory()" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm hover:bg-red-200 transition">Borrar</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 text-sm uppercase">
+                                    <th class="p-3 border-b">Hora</th>
+                                    <th class="p-3 border-b">ID</th>
+                                    <th class="p-3 border-b">Nombre</th>
+                                    <th class="p-3 border-b">Residencia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-tbody" class="text-sm text-slate-700"></tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        </main>
+    </div>
 
-        <!-- SECCIÓN ESCANEAR -->
-        <section id="tab-scan" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-md max-w-lg mx-auto">
-                <h2 class="text-xl font-bold mb-4 text-center text-indigo-700">Punto de Asistencia</h2>
-                <div class="relative bg-black rounded-lg overflow-hidden aspect-square mb-4 shadow-inner">
-                    <div id="reader" class="w-full h-full"></div>
-                    <div id="scan-overlay" class="absolute inset-0 pointer-events-none hidden border-2 border-indigo-500/50">
-                        <div class="absolute top-0 left-0 w-full h-1 bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)] animate-scan"></div>
-                    </div>
-                </div>
-                <div class="flex justify-center space-x-4 mb-4">
-                    <button onclick="startScanner()" class="bg-emerald-600 text-white px-6 py-2 rounded shadow hover:bg-emerald-700 transition font-bold"><i class="fas fa-power-off mr-2"></i> INICIAR</button>
-                    <button onclick="stopScanner()" class="bg-red-500 text-white px-6 py-2 rounded shadow hover:bg-red-600 transition font-bold"><i class="fas fa-stop mr-2"></i> PARAR</button>
-                </div>
-                <div id="last-scan-info" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
-                    <div class="text-emerald-800 font-bold text-lg"><i class="fas fa-check-circle"></i> ¡Bienvenido!</div>
-                    <div id="scan-result-name" class="text-slate-800 font-bold text-xl mt-1">Nombre</div>
-                    <div id="scan-result-time" class="text-slate-500 text-sm">Hora</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECCIÓN LISTA -->
-        <section id="tab-list" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-indigo-700">Registros</h2>
-                    <div class="space-x-2">
-                         <button onclick="exportToCSV()" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">Excel</button>
-                        <button onclick="clearHistory()" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm hover:bg-red-200 transition">Borrar</button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-600 text-sm uppercase">
-                                <th class="p-3">Hora</th>
-                                <th class="p-3">Nombre</th>
-                                <th class="p-3">Rol</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendance-tbody" class="text-sm text-slate-700"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
-
+    <!-- JS Logic -->
     <script>
-        // --- LÓGICA DE FOTO (FileReader) ---
-        let currentPhotoBase64 = null;
+        // --- 0. CONFIGURACIÓN DE SEGURIDAD ---
+        // Modifica estos valores para cambiar el usuario y contraseña
+        const VALID_USER = "admin";
+        const VALID_PASS = "1234"; 
 
+        function login() {
+            const user = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-password').value;
+            const errorBox = document.getElementById('login-error');
+
+            if (user === VALID_USER && pass === VALID_PASS) {
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                errorBox.classList.add('hidden');
+                showTab('create');
+            } else {
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+
+        // --- 1. Variables Globales y Data Storage ---
+        let html5QrcodeScanner = null;
+        let attendanceData = JSON.parse(localStorage.getItem('attendance_log_v3')) || [];
+        let currentPhotoBase64 = null; // Para la foto temporal
+
+        // --- 2. Navegación y Vistas ---
+        function showTab(tabId) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            // Lógica específica al cambiar
+            if (tabId === 'list') renderAttendanceTable();
+            if (tabId !== 'scan' && html5QrcodeScanner) stopScanner();
+        }
+
+        // --- 3. Generación y Descarga de Carnet ---
         function previewPhoto(input) {
             const file = input.files[0];
             if (file) {
-                // Validación de tamaño (Max 2MB para no bloquear navegador)
                 if(file.size > 2 * 1024 * 1024) {
                     alert("La imagen es muy pesada. Intenta con una menor a 2MB.");
                     return;
                 }
-
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    currentPhotoBase64 = e.target.result; // Aquí convertimos la imagen a texto Base64
-                    // Solo mostramos un mensaje de "Cargada", la previsualización real ocurre al dar "Generar"
+                    currentPhotoBase64 = e.target.result;
                     input.parentElement.querySelector('span').textContent = "Foto cargada: " + file.name;
                     input.parentElement.classList.add('border-indigo-500', 'bg-indigo-50');
                 }
@@ -203,33 +315,33 @@
             }
         }
 
-        // --- SISTEMA ---
-        let html5QrcodeScanner = null;
-        let attendanceData = JSON.parse(localStorage.getItem('attendance_log_v2')) || [];
-        
-        function showTab(tabId) {
-            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-            document.getElementById('tab-' + tabId).classList.remove('hidden');
-            if (tabId === 'list') renderAttendanceTable();
-            if (tabId !== 'scan' && html5QrcodeScanner) stopScanner();
-        }
-
         function generateCarnet() {
             const name = document.getElementById('input-name').value.trim();
             const id = document.getElementById('input-id').value.trim();
             const role = document.getElementById('input-role').value;
+            const residence = document.getElementById('input-residence').value.trim(); // Nuevo campo
+            const expiryDate = document.getElementById('input-expiry').value; // Nuevo campo
 
-            if (!name || !id) { alert("Faltan datos (Nombre o ID)"); return; }
+            if (!name || !id || !residence || !expiryDate) { 
+                alert("Por favor completa Nombre, ID, Residencia y Fecha de Vencimiento."); 
+                return; 
+            }
+            
+            // Formatear fecha para el carnet
+            const formattedExpiry = new Date(expiryDate).toLocaleDateString('es-ES', { 
+                year: 'numeric', month: '2-digit', day: '2-digit' 
+            }).toUpperCase();
 
             // 1. Configurar datos visuales
             document.getElementById('card-name').textContent = name;
             document.getElementById('card-id').textContent = `ID: ${id}`;
             document.getElementById('card-role').textContent = role;
+            document.getElementById('card-residence').innerHTML = `<i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i>${residence}`;
+            document.getElementById('card-expiry').textContent = `VENCE: ${formattedExpiry}`;
 
             // 2. Configurar la foto
             const imgElement = document.getElementById('card-photo-img');
             const iconElement = document.getElementById('card-photo-icon');
-            
             if (currentPhotoBase64) {
                 imgElement.src = currentPhotoBase64;
                 imgElement.classList.remove('hidden');
@@ -239,9 +351,14 @@
                 iconElement.classList.remove('hidden');
             }
 
-            // 3. Generar QR (¡SIN LA FOTO ADENTRO!)
-            // Solo guardamos los datos de texto ligeros
-            const qrData = JSON.stringify({ id, name, role, type: 'ACCESS_V2' });
+            // 3. Generar QR (Solo datos de texto clave)
+            const qrData = JSON.stringify({ 
+                id: id, 
+                name: name, 
+                residence: residence, // Incluimos residencia
+                role: role,
+                type: 'ACCESS_V3' 
+            });
             
             new QRious({
                 element: document.getElementById('qr-canvas'),
@@ -254,12 +371,52 @@
             document.getElementById('preview-placeholder').classList.add('hidden');
             document.getElementById('carnet-preview').classList.remove('hidden');
             document.getElementById('carnet-preview').classList.add('flex');
-            document.getElementById('btn-print').classList.remove('hidden');
+            document.getElementById('card-actions').classList.remove('hidden');
         }
 
-        // --- ESCÁNER ---
+        // Función para descargar el carnet como JPG
+        function downloadCarnet() {
+            const carnetElement = document.getElementById('carnet-preview');
+            const name = document.getElementById('input-name').value.trim().replace(/\s/g, '_');
+            
+            // Ocultar acciones antes de la captura (aunque en JPG no se verían, es buena práctica)
+            document.getElementById('card-actions').classList.add('hidden');
+
+            // Usamos html2canvas para renderizar el DIV como una imagen
+            html2canvas(carnetElement, {
+                scale: 3, // Mayor escala para mejor calidad de imagen
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: null, // Mantiene el fondo transparente si el div no tiene uno
+                letterRendering: true,
+            }).then(canvas => {
+                // Convertir el canvas a una imagen JPG
+                const imgData = canvas.toDataURL('image/jpeg');
+
+                // Crear un enlace temporal para la descarga
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = `Carnet_${name}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Volver a mostrar las acciones
+                document.getElementById('card-actions').classList.remove('hidden');
+                
+                alert("Descarga de JPG completada. ¡Revisa tu carpeta de descargas!");
+
+            }).catch(error => {
+                console.error("Error al generar el JPG:", error);
+                alert("Ocurrió un error al intentar descargar la imagen.");
+            });
+        }
+
+
+        // --- 4. Lógica del Escáner y Validación ---
         function startScanner() {
-            document.getElementById('last-scan-info').classList.add('hidden');
+            document.getElementById('scan-success-info').classList.add('hidden');
+            document.getElementById('scan-warning-info').classList.add('hidden');
             if (html5QrcodeScanner) return;
 
             html5QrcodeScanner = new Html5Qrcode("reader");
@@ -272,6 +429,9 @@
                 () => {}
             ).then(() => {
                 document.getElementById('scan-overlay').classList.remove('hidden');
+            }).catch(err => {
+                console.error("Error al iniciar la cámara", err);
+                alert("Error al iniciar la cámara. Verifique los permisos.");
             });
         }
 
@@ -290,75 +450,115 @@
 
             try {
                 const data = JSON.parse(text);
-                if (data.type !== 'ACCESS_V2') throw new Error("QR antiguo o inválido");
+                if (data.type !== 'ACCESS_V3') throw new Error("QR no reconocido o inválido");
 
-                // Registrar
                 const now = new Date();
                 const newEntry = {
                     id: data.id,
                     name: data.name,
-                    role: data.role,
+                    residence: data.residence,
                     timestamp: now.toISOString(),
                     displayTime: now.toLocaleTimeString()
                 };
 
-                // Evitar doble escaneo rápido (30 seg)
-                if (attendanceData.length > 0 && attendanceData[0].id === newEntry.id) {
-                    const diff = now - new Date(attendanceData[0].timestamp);
-                    if (diff < 30000) throw new Error("Ya registrado recientemente");
+                // VALIDACIÓN: Evitar doble escaneo rápido (30 seg)
+                const lastEntry = attendanceData[0];
+                if (lastEntry && lastEntry.id === newEntry.id) {
+                    const diffTime = now - new Date(lastEntry.timestamp);
+                    if (diffTime < 30000) { // Menos de 30 segundos
+                        showScanFeedback(false, data.name);
+                        return; // Detiene el registro
+                    }
                 }
 
+                // Si pasó la validación, registra y muestra éxito
                 attendanceData.unshift(newEntry);
-                localStorage.setItem('attendance_log_v2', JSON.stringify(attendanceData));
+                localStorage.setItem('attendance_log_v3', JSON.stringify(attendanceData));
+                showScanFeedback(true, data.name, newEntry.displayTime);
 
-                // Feedback
-                document.getElementById('scan-result-name').textContent = data.name;
-                document.getElementById('scan-result-time').textContent = newEntry.displayTime;
-                document.getElementById('last-scan-info').classList.remove('hidden');
-                
-                // Sonido
-                playBeep();
-
-                setTimeout(() => {
-                    if(html5QrcodeScanner) html5QrcodeScanner.resume();
-                    document.getElementById('last-scan-info').classList.add('hidden');
-                }, 2000);
 
             } catch (e) {
-                console.log(e);
-                alert("Error: " + (e.message || "QR Inválido"));
-                setTimeout(() => { if(html5QrcodeScanner) html5QrcodeScanner.resume(); }, 1000);
+                console.error("Error en el QR:", e.message);
+                showScanFeedback(false, null, null, "QR Inválido o corrupto.");
+
+            } finally {
+                setTimeout(() => { 
+                    if(html5QrcodeScanner) html5QrcodeScanner.resume();
+                    document.getElementById('scan-success-info').classList.add('hidden');
+                    document.getElementById('scan-warning-info').classList.add('hidden');
+                }, 3000);
             }
         }
 
-        // --- EXPORTAR Y UTILIDADES ---
+        function showScanFeedback(isSuccess, name, time, customError = null) {
+            const successBox = document.getElementById('scan-success-info');
+            const warningBox = document.getElementById('scan-warning-info');
+
+            successBox.classList.add('hidden');
+            warningBox.classList.add('hidden');
+            playBeep();
+
+            if (isSuccess) {
+                document.getElementById('scan-result-name').textContent = name;
+                document.getElementById('scan-result-time').textContent = time;
+                successBox.classList.remove('hidden');
+            } else if (customError) {
+                // Error general o QR inválido
+                warningBox.querySelector('.fa-exclamation-triangle').classList.add('fa-times-circle', 'text-red-700');
+                warningBox.querySelector('.fa-exclamation-triangle').classList.remove('fa-exclamation-triangle', 'text-yellow-800');
+                warningBox.querySelector('.font-bold').textContent = "ERROR";
+                document.getElementById('warning-message').textContent = customError;
+                warningBox.classList.remove('hidden');
+            } else {
+                // Ya marcó (warning)
+                warningBox.querySelector('.fa-exclamation-triangle').classList.remove('fa-times-circle', 'text-red-700');
+                warningBox.querySelector('.fa-exclamation-triangle').classList.add('fa-exclamation-triangle', 'text-yellow-800');
+                warningBox.querySelector('.font-bold').textContent = "¡Ya Marcó!";
+                document.getElementById('warning-message').textContent = `Registro para ${name} ya existe en los últimos 30 segundos.`;
+                warningBox.classList.remove('hidden');
+            }
+        }
+
+
+        // --- 5. Lógica de Datos y Reportes ---
         function renderAttendanceTable() {
             const tbody = document.getElementById('attendance-tbody');
-            tbody.innerHTML = attendanceData.length ? '' : '<tr><td colspan="3" class="p-4 text-center text-slate-400">Sin registros</td></tr>';
+            tbody.innerHTML = attendanceData.length ? '' : '<tr><td colspan="4" class="p-4 text-center text-slate-400">Sin registros hoy.</td></tr>';
+            
             attendanceData.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b";
-                tr.innerHTML = `<td class="p-3 font-mono text-xs">${row.displayTime}</td><td class="p-3">${row.name}</td><td class="p-3 text-xs text-indigo-600 uppercase">${row.role}</td>`;
+                tr.className = "border-b hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-xs">${row.displayTime}</td>
+                    <td class="p-3 text-slate-500">${row.id}</td>
+                    <td class="p-3 font-medium text-slate-800">${row.name}</td>
+                    <td class="p-3 text-xs text-indigo-600">${row.residence}</td>
+                `;
                 tbody.appendChild(tr);
             });
         }
 
         function clearHistory() {
-            if(confirm("¿Borrar todo?")) {
+            if(confirm("¿Estás seguro de borrar todo el historial? Esta acción es irreversible.")) {
                 attendanceData = [];
-                localStorage.removeItem('attendance_log_v2');
+                localStorage.removeItem('attendance_log_v3');
                 renderAttendanceTable();
             }
         }
         
         function exportToCSV() {
-            let csv = "Fecha,Nombre,ID,Rol\n" + attendanceData.map(row => `${row.timestamp},"${row.name}",${row.id},${row.role}`).join("\n");
+            let csv = "Fecha,Hora,ID,Nombre,Residencia\n" + attendanceData.map(row => {
+                const datePart = new Date(row.timestamp).toLocaleDateString();
+                return `${datePart},${row.displayTime},${row.id},"${row.name}",${row.residence}`
+            }).join("\n");
+            
             const link = document.createElement("a");
             link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-            link.download = "asistencia.csv";
+            link.download = "reporte_asistencia_qr.csv";
             link.click();
         }
 
+        // --- 6. Utilidades de Audio ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playBeep() {
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -369,9 +569,13 @@
             o.start(); o.stop(audioCtx.currentTime + 0.1);
         }
         
-        renderAttendanceTable();
+        // Inicializar
+        // Nota: Solo se muestra el contenido de la App después del login
     </script>
 </body>
 </html>
+
+
+        
 
 
