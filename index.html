@@ -1,213 +1,206 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistencia QR Pro</title>
+    <title>Asistencia QR Pro v2</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Iconos -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-    <!-- Fuente -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Estilos del Carnet para captura */
+        /* Estilos del Carnet */
         #id-card-preview {
-            width: 320px;
-            height: 500px;
-            background: white;
-            position: relative;
-            overflow: hidden;
-            border-radius: 16px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            width: 320px; height: 500px; background: white; position: relative;
+            overflow: hidden; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
         }
-        
-        /* Diseño de fondo del carnet */
         .card-header-bg {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-            height: 140px;
-            width: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 0;
-            border-bottom-left-radius: 50% 20%;
-            border-bottom-right-radius: 50% 20%;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            height: 150px; width: 100%; position: absolute; top: 0; left: 0; z-index: 0;
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
         }
-
-        /* Scanner container */
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; }
-
-        /* Loader */
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; position: relative; }
+        
+        /* Scrollbar fina */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="h-screen flex flex-col">
+<body class="h-screen flex flex-col overflow-hidden text-gray-800">
 
-    <!-- LOGIN SCREEN -->
-    <div id="login-view" class="flex-1 flex items-center justify-center bg-gray-100 p-4 z-50">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-            <div class="text-center mb-6">
-                <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-shield-alt text-2xl text-blue-600"></i>
+    <div id="login-view" class="flex-1 flex items-center justify-center bg-slate-100 p-4 z-50 absolute inset-0">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100">
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
+                    <i class="fas fa-qrcode text-3xl text-white"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800">Acceso Seguro</h1>
-                <p class="text-gray-500 text-sm">Sistema de Asistencia QR</p>
+                <h1 class="text-2xl font-bold text-gray-800">Control de Acceso</h1>
+                <p class="text-gray-500 text-sm mt-1">Identifícate para continuar</p>
             </div>
             
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-                    <input type="text" id="username" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="admin">
+                    <input type="text" id="username" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Usuario">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                    <input type="password" id="password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="••••">
+                    <input type="password" id="password" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Contraseña">
                 </div>
-                <div id="login-error" class="text-red-500 text-sm text-center hidden">Credenciales incorrectas</div>
-                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg">
-                    Ingresar
+                <div id="login-error" class="text-red-500 text-xs text-center hidden bg-red-50 p-2 rounded">Credenciales incorrectas</div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+                    Iniciar Sesión
                 </button>
             </form>
-            <div class="mt-4 text-center">
-                <p id="db-status" class="text-xs text-gray-400"><i class="fas fa-circle-notch fa-spin"></i> Conectando a Firebase...</p>
+            <div class="mt-6 text-center">
+                <p id="db-status" class="text-xs text-gray-400 font-mono"><i class="fas fa-circle-notch fa-spin"></i> Conectando...</p>
             </div>
         </div>
     </div>
 
-    <!-- APP SCREEN -->
-    <div id="app-view" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+    <div id="app-view" class="hidden flex-1 flex flex-col h-full">
         
-        <!-- Header -->
-        <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-10">
-            <h1 class="text-lg font-bold text-gray-800"><i class="fas fa-qrcode text-blue-600 mr-2"></i>Asistencia QR</h1>
-            <button onclick="logout()" class="text-gray-500 hover:text-red-500"><i class="fas fa-sign-out-alt"></i></button>
+        <header class="bg-white border-b px-4 py-3 flex justify-between items-center z-10 sticky top-0">
+            <h1 class="font-bold text-gray-800 flex items-center gap-2">
+                <span class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-lg text-sm"><i class="fas fa-check"></i></span>
+                Asistencia Pro
+            </h1>
+            <button onclick="logout()" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-power-off"></i></button>
         </header>
 
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto p-4 relative">
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-2 md:p-6 pb-20">
             
-            <!-- SECTION: GENERAR CARNET -->
-            <div id="tab-generar" class="tab-content active max-w-4xl mx-auto">
-                <div class="grid md:grid-cols-2 gap-8">
-                    <!-- Formulario -->
-                    <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Datos del Usuario</h2>
-                        <form id="carnet-form" class="space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
+            <div id="tab-generar" class="tab-content active max-w-5xl mx-auto">
+                <div class="grid lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-fit">
+                        <div class="flex justify-between items-center mb-6 border-b pb-4">
+                            <h2 class="text-lg font-bold text-gray-700">Nuevo Registro</h2>
+                            <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-medium">Paso 1</span>
+                        </div>
+                        <form id="carnet-form" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="text-xs font-bold text-gray-500">ID / DNI</label>
-                                    <input type="text" id="inp-id" required class="w-full p-2 border rounded bg-gray-50 text-sm" placeholder="12345678">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">ID / Documento</label>
+                                    <input type="text" id="inp-id" required class="w-full p-2.5 border rounded-lg bg-gray-50 focus:bg-white transition text-sm outline-none focus:ring-2 focus:ring-blue-100" placeholder="Ej: 1005234">
                                 </div>
                                 <div>
-                                    <label class="text-xs font-bold text-gray-500">Rol</label>
-                                    <select id="inp-role" class="w-full p-2 border rounded bg-gray-50 text-sm">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Rol</label>
+                                    <select id="inp-role" class="w-full p-2.5 border rounded-lg bg-gray-50 text-sm outline-none">
                                         <option value="Estudiante">Estudiante</option>
                                         <option value="Profesor">Profesor</option>
-                                        <option value="Staff">Staff</option>
+                                        <option value="Admin">Administrativo</option>
+                                        <option value="Visitante">Visitante</option>
                                     </select>
                                 </div>
                             </div>
                             
                             <div>
-                                <label class="text-xs font-bold text-gray-500">Nombre Completo</label>
-                                <input type="text" id="inp-name" required class="w-full p-2 border rounded bg-gray-50 text-sm" placeholder="Juan Pérez">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Nombre Completo</label>
+                                <input type="text" id="inp-name" required class="w-full p-2.5 border rounded-lg bg-gray-50 focus:bg-white transition text-sm outline-none focus:ring-2 focus:ring-blue-100" placeholder="Ej: Maria Gonzalez">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Sede / Ubicación</label>
+                                    <input type="text" id="inp-residence" class="w-full p-2.5 border rounded-lg bg-gray-50 text-sm outline-none" placeholder="Sede Norte">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Vencimiento</label>
+                                    <input type="date" id="inp-expiry" class="w-full p-2.5 border rounded-lg bg-gray-50 text-sm outline-none">
+                                </div>
                             </div>
 
                             <div>
-                                <label class="text-xs font-bold text-gray-500">Residencia</label>
-                                <input type="text" id="inp-residence" class="w-full p-2 border rounded bg-gray-50 text-sm" placeholder="Ciudad / Dirección">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Foto (Opcional)</label>
+                                <input type="file" id="inp-photo" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                                <p class="text-[10px] text-gray-400 mt-1">* Máx 500KB para optimizar base de datos</p>
                             </div>
 
-                            <div>
-                                <label class="text-xs font-bold text-gray-500">Vencimiento</label>
-                                <input type="date" id="inp-expiry" class="w-full p-2 border rounded bg-gray-50 text-sm">
-                            </div>
-
-                            <div>
-                                <label class="text-xs font-bold text-gray-500">Foto de Perfil</label>
-                                <input type="file" id="inp-photo" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                            </div>
-
-                            <div class="pt-4 flex gap-2">
-                                <button type="button" onclick="previewCard()" class="flex-1 bg-gray-800 text-white py-2 rounded hover:bg-gray-900 text-sm">
-                                    <i class="fas fa-eye mr-1"></i> Previsualizar
+                            <div class="pt-4 flex gap-3">
+                                <button type="button" onclick="previewCard()" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg hover:bg-gray-200 text-sm font-semibold transition">
+                                    <i class="fas fa-sync-alt mr-1"></i> Generar Vista
                                 </button>
-                                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm shadow">
-                                    <i class="fas fa-save mr-1"></i> Guardar
+                                <button type="submit" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 text-sm font-semibold shadow-lg shadow-blue-200 transition transform active:scale-95">
+                                    <i class="fas fa-save mr-1"></i> Guardar BD
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Visualización Carnet -->
-                    <div class="flex flex-col items-center justify-center">
-                        <div id="id-card-wrap" class="mb-4 transform scale-90 md:scale-100 transition-transform origin-top">
-                            <!-- El Carnet HTML -->
+                    <div class="flex flex-col items-center justify-center bg-gray-100 rounded-2xl p-4 border border-dashed border-gray-300">
+                        <div id="id-card-wrap" class="mb-6 transform transition-transform hover:scale-[1.02] duration-300">
                             <div id="id-card-preview">
                                 <div class="card-header-bg"></div>
                                 
                                 <div class="relative z-10 flex flex-col items-center pt-8 h-full">
-                                    <!-- Titulo -->
-                                    <h3 class="text-white text-lg font-bold tracking-widest uppercase opacity-90 mb-4">Credencial</h3>
+                                    <h3 class="text-white text-sm font-bold tracking-[0.2em] uppercase opacity-80 mb-6">Identificación Digital</h3>
                                     
-                                    <!-- Foto -->
-                                    <div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200">
-                                        <img id="card-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' class='h-full w-full text-gray-400' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z' /%3E%3C/svg%3E" class="w-full h-full object-cover">
+                                    <div class="w-36 h-36 rounded-full p-1 bg-white shadow-xl">
+                                        <img id="card-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' class='h-full w-full text-gray-200' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z' /%3E%3C/svg%3E" class="w-full h-full rounded-full object-cover">
                                     </div>
 
-                                    <!-- Nombre y Rol -->
-                                    <div class="text-center mt-4 w-full px-4">
-                                        <h2 id="card-name" class="text-xl font-bold text-gray-800 truncate">Nombre Usuario</h2>
-                                        <span id="card-role" class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full uppercase tracking-wide font-semibold mt-1">ROL</span>
+                                    <div class="text-center mt-5 w-full px-6">
+                                        <h2 id="card-name" class="text-2xl font-bold text-gray-800 leading-tight truncate">Nombre Usuario</h2>
+                                        <div class="mt-2">
+                                            <span id="card-role" class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full uppercase tracking-wider font-bold">ROL</span>
+                                        </div>
                                     </div>
 
-                                    <!-- Detalles -->
-                                    <div class="mt-6 text-center text-sm text-gray-600 space-y-1">
-                                        <p>ID: <span id="card-id" class="font-mono font-bold text-gray-800">00000000</span></p>
-                                        <p>Residencia: <span id="card-residence">-</span></p>
-                                        <p class="text-xs text-red-500 mt-1">Vence: <span id="card-expiry">--/--/----</span></p>
+                                    <div class="mt-6 flex justify-between w-full px-10 text-center">
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 uppercase font-bold">ID Número</p>
+                                            <p id="card-id" class="font-mono text-gray-800 font-bold text-lg">000000</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 uppercase font-bold">Sede</p>
+                                            <p id="card-residence" class="text-gray-800 font-semibold">-</p>
+                                        </div>
                                     </div>
 
-                                    <!-- QR Code -->
-                                    <div class="mt-auto mb-6 bg-white p-2 rounded shadow-sm border">
-                                        <div id="card-qrcode"></div>
+                                    <div class="mt-auto mb-8 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
+                                        <div id="card-qrcode" class="opacity-90"></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <button onclick="downloadCardImage()" id="btn-download" class="hidden bg-green-600 text-white px-6 py-2 rounded-full shadow-lg hover:bg-green-700 transition">
-                            <i class="fas fa-download mr-2"></i> Descargar JPG
+                        <button onclick="downloadCardImage()" id="btn-download" class="hidden bg-green-500 text-white px-8 py-3 rounded-full shadow-lg hover:bg-green-600 transition font-bold flex items-center gap-2 transform active:scale-95">
+                            <i class="fas fa-download"></i> Descargar JPG
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION: GESTIONAR -->
-            <div id="tab-gestionar" class="tab-content max-w-4xl mx-auto">
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="p-4 border-b flex justify-between items-center bg-gray-50">
-                        <h2 class="font-semibold text-gray-700">Lista de Carnets</h2>
-                        <span id="user-count" class="text-xs bg-gray-200 px-2 py-1 rounded">0 usuarios</span>
+            <div id="tab-gestionar" class="tab-content max-w-5xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-5 border-b flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50">
+                        <div>
+                            <h2 class="font-bold text-gray-800 text-lg">Base de Datos</h2>
+                            <p class="text-xs text-gray-500">Gestión de usuarios registrados</p>
+                        </div>
+                        
+                        <div class="relative w-full md:w-64">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
+                            <input type="text" id="search-input" onkeyup="filterUsers()" placeholder="Buscar por nombre o ID..." 
+                                class="w-full pl-9 pr-4 py-2 border rounded-full text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        
+                        <span id="user-count" class="text-xs font-mono bg-white border px-3 py-1 rounded-full">0 total</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm text-gray-600">
-                            <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
+                            <thead class="bg-gray-100 text-gray-500 uppercase text-xs font-bold tracking-wider">
                                 <tr>
                                     <th class="p-4">Usuario</th>
                                     <th class="p-4">ID</th>
@@ -215,33 +208,55 @@
                                     <th class="p-4 text-center">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="users-table-body">
-                                <!-- Filas dinámicas aquí -->
-                                <tr><td colspan="4" class="p-4 text-center">Cargando datos...</td></tr>
+                            <tbody id="users-table-body" class="divide-y divide-gray-100">
+                                <tr><td colspan="4" class="p-8 text-center"><i class="fas fa-circle-notch fa-spin text-blue-500"></i> Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION: ASISTENCIA -->
-            <div id="tab-asistencia" class="tab-content max-w-md mx-auto">
+            <div id="tab-asistencia" class="tab-content max-w-lg mx-auto">
                 
-                <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-                    <h2 class="text-center font-bold text-gray-800 mb-2">Escanear QR</h2>
-                    <div id="reader" class="bg-black text-white h-64 flex items-center justify-center mb-2">
-                        <span class="text-sm text-gray-400">Cámara inactiva</span>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6 relative">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-blue-500 z-10"></div>
+                    
+                    <div class="p-4 text-center">
+                        <h2 class="font-bold text-gray-800 text-lg mb-1">Registro de Asistencia</h2>
+                        <p class="text-xs text-gray-500 mb-4">Escanea el código QR o ingresa el ID</p>
+                        
+                        <div class="relative rounded-xl overflow-hidden bg-black aspect-square max-h-64 mx-auto border-2 border-gray-100 shadow-inner">
+                            <div id="reader" class="h-full w-full object-cover"></div>
+                            <div class="absolute inset-0 border-2 border-white/30 m-8 rounded-lg pointer-events-none flex items-center justify-center">
+                                <div class="w-full h-0.5 bg-red-500/50 animate-pulse"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="scan-result" class="hidden mt-3 p-3 rounded-lg text-sm font-bold animate-pulse"></div>
                     </div>
-                    <div id="scan-result" class="hidden p-3 rounded-lg text-center text-sm font-semibold mt-2"></div>
+
+                    <div class="bg-gray-50 p-4 border-t border-gray-100">
+                        <div class="flex gap-2">
+                            <input type="text" id="manual-id" placeholder="Ingresar ID Manualmente" class="flex-1 p-2 border rounded-lg text-sm text-center font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+                            <button onclick="manualAttendance()" class="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 text-sm">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="p-3 bg-gray-50 border-b">
-                        <h3 class="font-semibold text-gray-700 text-sm">Registros de Hoy</h3>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-80">
+                    <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-700 text-sm"><i class="fas fa-clock text-blue-500 mr-2"></i>Actividad de Hoy</h3>
+                        <button onclick="exportToCSV()" class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold hover:bg-green-200 transition">
+                            <i class="fas fa-file-excel mr-1"></i> Excel
+                        </button>
                     </div>
-                    <ul id="attendance-list" class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                        <!-- Logs dinámicos -->
-                        <li class="p-4 text-center text-xs text-gray-400">Sin registros hoy</li>
+                    <ul id="attendance-list" class="divide-y divide-gray-100 overflow-y-auto flex-1 p-2">
+                        <li class="p-8 text-center text-xs text-gray-400 flex flex-col items-center">
+                            <i class="fas fa-clipboard-list text-2xl mb-2 opacity-30"></i>
+                            Sin registros hoy
+                        </li>
                     </ul>
                 </div>
 
@@ -249,34 +264,40 @@
 
         </main>
 
-        <!-- Bottom Navigation (Mobile Friendly) -->
-        <nav class="bg-white shadow-up border-t flex justify-around p-2 pb-safe z-20">
-            <button onclick="switchTab('tab-generar')" class="nav-btn flex flex-col items-center p-2 text-blue-600 w-full" data-target="tab-generar">
-                <i class="fas fa-id-card text-xl mb-1"></i>
-                <span class="text-xs font-medium">Carnet</span>
+        <nav class="bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t flex justify-around p-2 pb-safe z-40">
+            <button onclick="switchTab('tab-generar')" class="nav-btn group flex flex-col items-center p-2 w-full text-blue-600 relative" data-target="tab-generar">
+                <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full opacity-0 group-[.active]:opacity-100 transition-all"></div>
+                <i class="fas fa-id-card text-xl mb-1 transition-transform group-active:scale-90"></i>
+                <span class="text-[10px] font-bold">Carnet</span>
             </button>
-            <button onclick="switchTab('tab-gestionar')" class="nav-btn flex flex-col items-center p-2 text-gray-400 w-full" data-target="tab-gestionar">
-                <i class="fas fa-users text-xl mb-1"></i>
-                <span class="text-xs font-medium">Gestión</span>
+            <button onclick="switchTab('tab-gestionar')" class="nav-btn group flex flex-col items-center p-2 w-full text-gray-400 relative" data-target="tab-gestionar">
+                <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full opacity-0 group-[.active]:opacity-100 transition-all"></div>
+                <i class="fas fa-users-cog text-xl mb-1 transition-transform group-active:scale-90"></i>
+                <span class="text-[10px] font-bold">Gestionar</span>
             </button>
-            <button onclick="switchTab('tab-asistencia')" class="nav-btn flex flex-col items-center p-2 text-gray-400 w-full" data-target="tab-asistencia">
-                <i class="fas fa-qrcode text-xl mb-1"></i>
-                <span class="text-xs font-medium">Escanear</span>
+            <button onclick="switchTab('tab-asistencia')" class="nav-btn group flex flex-col items-center p-2 w-full text-gray-400 relative" data-target="tab-asistencia">
+                <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full opacity-0 group-[.active]:opacity-100 transition-all"></div>
+                <i class="fas fa-qrcode text-xl mb-1 transition-transform group-active:scale-90"></i>
+                <span class="text-[10px] font-bold">Escanear</span>
             </button>
         </nav>
     </div>
 
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed top-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-xl transform translate-x-full transition-transform duration-300 z-50 flex items-center">
-        <i id="toast-icon" class="fas fa-info-circle mr-3"></i>
-        <span id="toast-message">Notificación</span>
+    <div id="toast" class="fixed top-5 right-5 z-[60] transform translate-x-full transition-all duration-300">
+        <div class="bg-gray-800 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px]">
+            <i id="toast-icon" class="fas fa-info-circle text-lg"></i>
+            <div>
+                <h4 id="toast-title" class="font-bold text-sm">Notificación</h4>
+                <p id="toast-message" class="text-xs text-gray-300">Mensaje del sistema</p>
+            </div>
+        </div>
     </div>
 
     <script type="module">
-        // --- 1. FIREBASE CONFIG & INIT ---
+        // --- CONFIGURACIÓN FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBo9YlpqRx04DmnGEZ7sw5M07AGyC7eRG4",
@@ -292,90 +313,79 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Variables Globales del Sistema
-        const APP_ID = "asistencia-qr-v1"; // Identificador para la ruta artifacts
+        // Variables de Estado
+        const APP_ID = "asistencia-qr-v1"; 
         let currentUser = null;
         let html5QrcodeScanner = null;
-        let isScanning = false;
-        let lastScannedCode = null;
-        let allStudentsCache = []; // Caché local para búsquedas rápidas al escanear
         let scanCooldown = false;
+        
+        // Caches Locales (Para búsqueda y validación rápida)
+        let allStudentsCache = []; 
+        let todaysAttendanceCache = [];
 
-        // --- 2. AUTHENTICATION (System Backend) ---
-        // Iniciamos sesión anónima en Firebase para tener permisos de lectura/escritura en Firestore
-        // El login "admin" es solo una puerta visual.
+        // --- AUTENTICACIÓN ---
         async function initAuth() {
             try {
                 const userCredential = await signInAnonymously(auth);
                 currentUser = userCredential.user;
-                console.log("Conectado a Firebase como:", currentUser.uid);
-                document.getElementById('db-status').innerHTML = '<i class="fas fa-wifi text-green-500"></i> Sistema Conectado';
+                document.getElementById('db-status').innerHTML = '<span class="text-green-500 font-bold"><i class="fas fa-wifi"></i> Online</span>';
                 
-                // Iniciar listeners una vez autenticado
+                // Cargar listeners
                 startStudentsListener();
                 startAttendanceListener();
             } catch (error) {
-                console.error("Error Auth:", error);
-                document.getElementById('db-status').innerHTML = '<span class="text-red-500">Error de conexión</span>';
+                console.error("Auth Error:", error);
+                document.getElementById('db-status').innerHTML = '<span class="text-red-500">Error de red</span>';
             }
         }
         initAuth();
 
-        // --- 3. UI LOGIN LOGIC ---
-        const loginForm = document.getElementById('login-form');
-        loginForm.addEventListener('submit', (e) => {
+        // --- LOGIN UI ---
+        document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const u = document.getElementById('username').value;
             const p = document.getElementById('password').value;
 
+            // NOTA: Esto sigue siendo inseguro (Client-side). Para producción usar Auth Real.
             if(u === 'admin' && p === '1234') {
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('app-view').classList.remove('hidden');
                 document.getElementById('app-view').classList.add('flex');
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
+                document.getElementById('login-form').classList.add('animate-pulse');
+                setTimeout(() => document.getElementById('login-form').classList.remove('animate-pulse'), 500);
             }
         });
+        window.logout = () => location.reload();
 
-        window.logout = () => {
-            location.reload();
-        };
-
-        // --- 4. NAVIGATION LOGIC ---
+        // --- NAVEGACIÓN ---
         window.switchTab = (tabId) => {
-            // UI Update
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             
             document.querySelectorAll('.nav-btn').forEach(el => {
                 if(el.dataset.target === tabId) {
-                    el.classList.add('text-blue-600');
+                    el.classList.add('text-blue-600', 'active');
                     el.classList.remove('text-gray-400');
                 } else {
-                    el.classList.remove('text-blue-600');
+                    el.classList.remove('text-blue-600', 'active');
                     el.classList.add('text-gray-400');
                 }
             });
 
-            // Logic Specifics
-            if(tabId === 'tab-asistencia') {
-                startScanner();
-            } else {
-                stopScanner();
-            }
+            if(tabId === 'tab-asistencia') startScanner();
+            else stopScanner();
         };
 
-        // --- 5. CARNET GENERATION LOGIC ---
-        
-        // Image Processing (File to Base64)
+        // --- GENERADOR DE CARNET ---
         let currentPhotoBase64 = "";
+        
         document.getElementById('inp-photo').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if(file) {
-                // Validación básica de tamaño (aprox 500KB límite suave)
-                if(file.size > 500000) {
-                    showToast("La imagen es muy grande. Intenta usar una más pequeña.", "error");
-                    // No return, tratamos de procesarla igual pero aviso
+                if(file.size > 500 * 1024) { // 500KB alerta
+                    showToast("Imagen muy pesada", "Se recomienda usar imágenes menores a 500KB", "error");
                 }
                 const reader = new FileReader();
                 reader.onloadend = function() {
@@ -386,36 +396,26 @@
             }
         });
 
-        // Generar QR y Preview
         window.previewCard = () => {
-            const data = {
-                id: document.getElementById('inp-id').value,
-                name: document.getElementById('inp-name').value,
-                role: document.getElementById('inp-role').value,
-                residence: document.getElementById('inp-residence').value,
-                expiry: document.getElementById('inp-expiry').value
-            };
-
-            if(!data.id || !data.name) {
-                showToast("ID y Nombre son obligatorios", "error");
+            const id = document.getElementById('inp-id').value;
+            const name = document.getElementById('inp-name').value;
+            
+            if(!id || !name) {
+                showToast("Faltan datos", "ID y Nombre son obligatorios", "error");
                 return false;
             }
 
-            // Update UI Text
-            document.getElementById('card-name').innerText = data.name;
-            document.getElementById('card-role').innerText = data.role;
-            document.getElementById('card-id').innerText = data.id;
-            document.getElementById('card-residence').innerText = data.residence || "N/A";
-            document.getElementById('card-expiry').innerText = data.expiry || "Indefinido";
+            document.getElementById('card-name').innerText = name;
+            document.getElementById('card-role').innerText = document.getElementById('inp-role').value;
+            document.getElementById('card-id').innerText = id;
+            document.getElementById('card-residence').innerText = document.getElementById('inp-residence').value || "General";
 
-            // Generate QR
             const qrContainer = document.getElementById('card-qrcode');
-            qrContainer.innerHTML = ""; // Clear prev
+            qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
-                text: data.id, // El QR contiene SOLO el ID
-                width: 80,
-                height: 80,
-                colorDark : "#000000",
+                text: id,
+                width: 90, height: 90,
+                colorDark : "#1e3a8a",
                 colorLight : "#ffffff",
                 correctLevel : QRCode.CorrectLevel.H
             });
@@ -424,129 +424,127 @@
             return true;
         };
 
-        // Guardar en Firestore
         document.getElementById('carnet-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if(!currentUser) { showToast("Sin conexión a base de datos", "error"); return; }
-            if(!previewCard()) return; // Validar y generar vista primero
+            if(!previewCard()) return;
 
-            const userData = {
-                id_card: document.getElementById('inp-id').value,
-                name: document.getElementById('inp-name').value,
-                role: document.getElementById('inp-role').value,
-                residence: document.getElementById('inp-residence').value,
-                expiry: document.getElementById('inp-expiry').value,
-                photo: currentPhotoBase64, // Guardamos la foto en base64 (cuidado con el tamaño)
-                createdAt: serverTimestamp()
-            };
-
-            // Verificar si el ID ya existe (en caché local para evitar lecturas extras o query compleja)
-            const exists = allStudentsCache.some(s => s.id_card === userData.id_card);
-            if(exists) {
-                showToast("¡Este ID ya está registrado!", "error");
+            const id = document.getElementById('inp-id').value;
+            if(allStudentsCache.some(s => s.id_card === id)) {
+                showToast("Duplicado", "Este ID ya existe en la base de datos", "error");
                 return;
             }
 
             try {
-                // Ruta pública para que todos los admins vean los estudiantes
-                const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'students');
-                await addDoc(colRef, userData);
-                showToast("Usuario guardado correctamente", "success");
-                // Reset form opcional
-                // e.target.reset();
+                const userData = {
+                    id_card: id,
+                    name: document.getElementById('inp-name').value,
+                    role: document.getElementById('inp-role').value,
+                    residence: document.getElementById('inp-residence').value,
+                    expiry: document.getElementById('inp-expiry').value,
+                    photo: currentPhotoBase64,
+                    createdAt: serverTimestamp()
+                };
+                
+                await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'students'), userData);
+                showToast("Éxito", "Usuario registrado correctamente", "success");
+                document.getElementById('carnet-form').reset();
+                // Mantener la foto actual o resetear
+                currentPhotoBase64 = "";
             } catch (err) {
-                console.error(err);
-                showToast("Error al guardar: " + err.message, "error");
+                showToast("Error", err.message, "error");
             }
         });
 
-        // Descargar JPG
         window.downloadCardImage = () => {
             const element = document.getElementById('id-card-preview');
-            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+            html2canvas(element, { scale: 3, useCORS: true }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = `carnet-${document.getElementById('inp-id').value}.jpg`;
-                link.href = canvas.toDataURL("image/jpeg");
+                link.download = `carnet-${document.getElementById('card-id').innerText}.jpg`;
+                link.href = canvas.toDataURL("image/jpeg", 0.9);
                 link.click();
             });
         };
 
-        // --- 6. DATA MANAGEMENT (CRUD) ---
+        // --- GESTIÓN Y BÚSQUEDA ---
         function startStudentsListener() {
             if (!currentUser) return;
-            const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'students');
-            
-            // Query simple, sin orderBy complejo para evitar errores de índice
-            onSnapshot(colRef, (snapshot) => {
-                const tbody = document.getElementById('users-table-body');
-                tbody.innerHTML = "";
-                allStudentsCache = []; // Actualizar caché
-                
-                if(snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400">No hay usuarios registrados</td></tr>';
-                    document.getElementById('user-count').innerText = "0 usuarios";
-                    return;
-                }
-
-                snapshot.forEach(docSnap => {
-                    const student = docSnap.data();
-                    student.docId = docSnap.id;
-                    allStudentsCache.push(student);
-
-                    const tr = document.createElement('tr');
-                    tr.className = "border-b hover:bg-gray-50";
-                    tr.innerHTML = `
-                        <td class="p-3 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                                ${student.photo ? `<img src="${student.photo}" class="w-full h-full object-cover">` : '<i class="fas fa-user text-gray-400 p-2"></i>'}
-                            </div>
-                            <div>
-                                <div class="font-bold text-gray-800">${student.name}</div>
-                            </div>
-                        </td>
-                        <td class="p-3 font-mono text-xs">${student.id_card}</td>
-                        <td class="p-3"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${student.role}</span></td>
-                        <td class="p-3 text-center">
-                            <button onclick="deleteUser('${docSnap.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded transition">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
+            // Escuchamos todos los estudiantes (para apps pequeñas < 500 users está ok)
+            onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'students'), (snapshot) => {
+                allStudentsCache = [];
+                snapshot.forEach(doc => {
+                    allStudentsCache.push({ ...doc.data(), docId: doc.id });
                 });
-                document.getElementById('user-count').innerText = `${allStudentsCache.length} usuarios`;
-            }, (error) => {
-                console.error("Error obteniendo usuarios:", error);
+                renderUsersTable(allStudentsCache);
             });
         }
 
+        // Función de Renderizado separada para poder usarla en el buscador
+        window.renderUsersTable = (usersList) => {
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = "";
+            document.getElementById('user-count').innerText = `${usersList.length} total`;
+
+            if(usersList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-400 text-sm">No se encontraron resultados</td></tr>';
+                return;
+            }
+
+            usersList.forEach(student => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-50 hover:bg-blue-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden shadow-sm border border-gray-100">
+                            ${student.photo ? `<img src="${student.photo}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-gray-400"><i class="fas fa-user"></i></div>'}
+                        </div>
+                        <div class="font-bold text-gray-700 text-sm">${student.name}</div>
+                    </td>
+                    <td class="p-4 font-mono text-xs text-blue-600 font-bold">${student.id_card}</td>
+                    <td class="p-4"><span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-full uppercase font-bold border">${student.role}</span></td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteUser('${student.docId}')" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        // Función del Buscador
+        window.filterUsers = () => {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allStudentsCache.filter(s => 
+                s.name.toLowerCase().includes(query) || 
+                s.id_card.includes(query)
+            );
+            renderUsersTable(filtered);
+        };
+
         window.deleteUser = async (docId) => {
-            if(confirm("¿Estás seguro de borrar este usuario?")) {
+            if(confirm("¿Estás seguro de eliminar este registro permanentemente?")) {
                 try {
                     await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'students', docId));
-                    showToast("Usuario eliminado", "success");
-                } catch (e) {
-                    showToast("Error al eliminar", "error");
-                }
+                    showToast("Eliminado", "Usuario borrado correctamente", "success");
+                } catch(e) { showToast("Error", "No se pudo borrar", "error"); }
             }
         };
 
-        // --- 7. ATTENDANCE & SCANNER LOGIC ---
-
+        // --- ASISTENCIA INTELIGENTE ---
         function startScanner() {
-            if(html5QrcodeScanner) return; // Ya existe
-
-            // Configurar scanner
+            if(html5QrcodeScanner) return;
             html5QrcodeScanner = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                config, 
-                onScanSuccess
-            ).catch(err => {
-                console.log("Error iniciando cámara", err);
-                document.getElementById('reader').innerHTML = '<p class="text-red-500 text-center p-4">Permiso de cámara denegado o error.</p>';
+            // Configuración optimizada para móviles
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+            
+            html5QrcodeScanner.start({ facingMode: "environment" }, config, processAttendance)
+            .catch(() => {
+                document.getElementById('reader').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 p-4"><i class="fas fa-camera-slash text-3xl mb-2"></i><p class="text-xs">No se detectó cámara</p></div>';
             });
         }
 
@@ -555,178 +553,189 @@
                 html5QrcodeScanner.stop().then(() => {
                     html5QrcodeScanner.clear();
                     html5QrcodeScanner = null;
-                }).catch(err => console.log(err));
+                }).catch(err => console.error(err));
             }
         }
 
-        async function onScanSuccess(decodedText, decodedResult) {
-            if(scanCooldown) return;
-            scanCooldown = true; // Evitar lecturas múltiples muy rápidas
+        // Lógica unificada para QR y Manual
+        window.manualAttendance = () => {
+            const manualId = document.getElementById('manual-id').value.trim();
+            if(manualId) {
+                processAttendance(manualId);
+                document.getElementById('manual-id').value = ""; // Limpiar
+            }
+        };
 
-            // Feedback visual inmediato
+        async function processAttendance(decodedText) {
+            if(scanCooldown) return;
+            scanCooldown = true;
+
             const resDiv = document.getElementById('scan-result');
             resDiv.classList.remove('hidden');
-            resDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando ID: ${decodedText}`;
-            resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-yellow-100 text-yellow-800";
-
-            // 1. Validar si el usuario existe en nuestro sistema (Usando caché local)
+            
+            // 1. Buscar Usuario
             const student = allStudentsCache.find(s => s.id_card === decodedText);
 
             if(!student) {
-                beep(false);
-                resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-red-100 text-red-800";
-                resDiv.innerHTML = `<i class="fas fa-times-circle"></i> ID Desconocido: ${decodedText}`;
+                playAudio('error');
+                resDiv.className = "mt-3 p-3 rounded-lg text-sm font-bold bg-red-100 text-red-700 border border-red-200";
+                resDiv.innerHTML = `<i class="fas fa-times-circle mr-2"></i>ID Desconocido: ${decodedText}`;
                 setTimeout(() => { scanCooldown = false; }, 2000);
                 return;
             }
 
-            // 2. Validar Anti-Doble Marcado (Consultando logs de hoy en caché o DB)
-            // Para simplificar y cumplir regla de "No Complex Queries", filtramos en memoria los logs de hoy
-            // que obtenemos del listener de abajo.
-            const todayStr = new Date().toLocaleDateString();
-            const alreadyChecked = todaysAttendanceCache.some(log => log.studentId === decodedText);
-
-            if(alreadyChecked) {
-                beep(false);
-                resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-orange-100 text-orange-800";
-                resDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${student.name} ya marcó hoy.`;
+            // 2. Verificar si ya marcó hoy
+            if(todaysAttendanceCache.some(log => log.studentId === decodedText)) {
+                playAudio('warning');
+                resDiv.className = "mt-3 p-3 rounded-lg text-sm font-bold bg-yellow-100 text-yellow-700 border border-yellow-200";
+                resDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${student.name} ya marcó hoy`;
                 setTimeout(() => { scanCooldown = false; }, 2500);
                 return;
             }
 
-            // 3. Registrar Asistencia
+            // 3. Registrar
             try {
-                beep(true);
-                const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'attendance');
-                await addDoc(colRef, {
+                playAudio('success');
+                const todayStr = new Date().toLocaleDateString();
+                
+                await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'attendance'), {
                     studentId: decodedText,
                     studentName: student.name,
+                    role: student.role,
                     timestamp: serverTimestamp(),
-                    dateStr: todayStr, // Campo auxiliar para filtrar fácil
-                    role: student.role
+                    dateStr: todayStr
                 });
 
-                resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-green-100 text-green-800";
-                resDiv.innerHTML = `<i class="fas fa-check-circle"></i> ¡Bienvenido, ${student.name}!`;
+                resDiv.className = "mt-3 p-3 rounded-lg text-sm font-bold bg-green-100 text-green-700 border border-green-200 shadow-sm";
+                resDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i>¡Bienvenido, ${student.name.split(' ')[0]}!`;
 
             } catch (error) {
-                console.error(error);
-                resDiv.innerText = "Error de conexión al guardar.";
+                resDiv.innerText = "Error de red";
             }
 
-            // Reset cooldown
             setTimeout(() => { 
                 scanCooldown = false; 
                 resDiv.classList.add('hidden');
             }, 3000);
         }
 
-        // Attendance List Management
-        let todaysAttendanceCache = [];
-
+        // Listener de Asistencia
         function startAttendanceListener() {
             if (!currentUser) return;
-            const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'attendance');
-            
-            // Obtenemos todo (Idealmente usaríamos where('dateStr', '==', today) pero requiere crear indice compuesto si ordenamos)
-            // Traemos los últimos 50 registros por simplicidad y filtramos en JS
-            const q = query(colRef, orderBy('timestamp', 'desc'), limit(50));
+            const q = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'attendance'), orderBy('timestamp', 'desc'), limit(100));
 
             onSnapshot(q, (snapshot) => {
                 const list = document.getElementById('attendance-list');
-                list.innerHTML = "";
-                todaysAttendanceCache = [];
                 const todayStr = new Date().toLocaleDateString();
-
-                if(snapshot.empty) {
-                    list.innerHTML = '<li class="p-4 text-center text-xs text-gray-400">Sin registros</li>';
-                    return;
-                }
+                todaysAttendanceCache = []; // Reset cache
+                
+                // Buffer temporal para renderizar
+                let htmlBuffer = "";
+                let countToday = 0;
 
                 snapshot.forEach(doc => {
                     const log = doc.data();
-                    // Filtramos solo los de hoy para el caché de validación
-                    // Nota: Firestore Timestamp a Date JS
-                    let logDateStr = "N/A";
-                    let timeStr = "--:--";
-                    if(log.timestamp) {
-                        const dateObj = log.timestamp.toDate();
-                        logDateStr = dateObj.toLocaleDateString();
-                        timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                        
-                        if(logDateStr === todayStr) {
-                            todaysAttendanceCache.push(log);
-                        }
-                    }
-
-                    // Renderizar solo si es hoy (Visualmente)
+                    if(!log.timestamp) return; // Skip pending writes
+                    
+                    const dateObj = log.timestamp.toDate();
+                    const logDateStr = dateObj.toLocaleDateString();
+                    
                     if(logDateStr === todayStr) {
-                        const li = document.createElement('li');
-                        li.className = "p-3 flex justify-between items-center";
-                        li.innerHTML = `
-                            <div>
-                                <p class="text-sm font-bold text-gray-800">${log.studentName}</p>
-                                <p class="text-xs text-gray-500">${log.role} • ID: ${log.studentId}</p>
-                            </div>
-                            <span class="text-xs font-mono bg-green-50 text-green-600 px-2 py-1 rounded">${timeStr}</span>
+                        todaysAttendanceCache.push(log);
+                        countToday++;
+                        const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        htmlBuffer += `
+                            <li class="p-3 flex justify-between items-center hover:bg-gray-50 transition border-b border-gray-50 last:border-0">
+                                <div class="flex items-center gap-3">
+                                    <div class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold">
+                                        ${log.studentName.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-bold text-gray-800">${log.studentName}</p>
+                                        <p class="text-[10px] text-gray-500 uppercase tracking-wide">${log.role}</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-mono font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">${timeStr}</span>
+                            </li>
                         `;
-                        list.appendChild(li);
                     }
                 });
-            }, (err) => console.log("Error attendance listener", err));
+
+                if(countToday === 0) {
+                    list.innerHTML = `<li class="p-8 text-center text-xs text-gray-400 flex flex-col items-center"><i class="fas fa-clipboard-check text-3xl mb-2 opacity-20"></i>Lista vacía hoy</li>`;
+                } else {
+                    list.innerHTML = htmlBuffer;
+                }
+            });
         }
+
+        // --- EXPORTAR A EXCEL (CSV) ---
+        window.exportToCSV = () => {
+            if(todaysAttendanceCache.length === 0) {
+                showToast("Vacío", "No hay datos para exportar hoy", "error");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nombre,ID,Rol,Fecha,Hora\n"; // Encabezados
+
+            todaysAttendanceCache.forEach(row => {
+                const dateObj = row.timestamp.toDate();
+                const date = dateObj.toLocaleDateString();
+                const time = dateObj.toLocaleTimeString();
+                csvContent += `${row.studentName},${row.studentId},${row.role},${date},${time}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `asistencia_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Descargado", "Reporte generado correctamente", "success");
+        };
 
         // --- UTILS ---
-        function showToast(msg, type="info") {
+        function showToast(title, msg, type="info") {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toast-icon');
-            const txt = document.getElementById('toast-message');
             
-            txt.innerText = msg;
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = msg;
+            
+            const colors = {
+                error: "text-red-400", success: "text-green-400", info: "text-blue-400"
+            };
+            icon.className = `fas ${type==='error'?'fa-times-circle':type==='success'?'fa-check-circle':'fa-info-circle'} text-2xl ${colors[type]}`;
+            
             toast.classList.remove('translate-x-full');
+            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+        }
+
+        function playAudio(type) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
             
-            if(type === 'error') {
-                toast.classList.replace('bg-gray-800', 'bg-red-600');
-                icon.className = "fas fa-times-circle mr-3";
-            } else if (type === 'success') {
-                toast.classList.replace('bg-gray-800', 'bg-green-600');
-                icon.className = "fas fa-check-circle mr-3";
+            if(type === 'success') {
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                osc.start(); osc.stop(ctx.currentTime + 0.1);
             } else {
-                toast.classList.replace('bg-red-600', 'bg-gray-800');
-                toast.classList.replace('bg-green-600', 'bg-gray-800');
-                icon.className = "fas fa-info-circle mr-3";
-            }
-
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-            }, 3000);
-        }
-
-        function beep(success) {
-            const context = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = context.createOscillator();
-            const gainNode = context.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(context.destination);
-
-            if(success) {
-                oscillator.type = "sine";
-                oscillator.frequency.value = 800;
-                gainNode.gain.value = 0.1;
-                oscillator.start();
-                setTimeout(() => oscillator.stop(), 100);
-            } else {
-                oscillator.type = "sawtooth";
-                oscillator.frequency.value = 200;
-                gainNode.gain.value = 0.1;
-                oscillator.start();
-                setTimeout(() => oscillator.stop(), 300);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.2);
+                gain.gain.value = 0.1;
+                osc.start(); osc.stop(ctx.currentTime + 0.3);
             }
         }
-
     </script>
 </body>
 </html>                                            
-        
-                                        
+            
