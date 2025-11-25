@@ -1,853 +1,732 @@
-<!DOCTYPE html> 
-<html lang="es" 
-    <!-- CONFIGURACIÓN DE FIREBASE EXTRAÍDA DEL JAVASCRIPT para mayor seguridad -->
-    <!-- ESTOS ATRIBUTOS CONTIENEN TU CONFIGURACIÓN DE FIREBASE Y SON LA CLAVE DE LA CONEXIÓN -->
-    data-api-key="AIzaSyBo9YlpqRx04DmnGEZ7sw5M07AGyC7eRG4"
-    data-auth-domain="app-asistecia-qr.firebaseapp.com"
-    data-project-id="app-asistecia-qr"
-    data-storage-bucket="app-asistecia-qr.firebasestorage.app"
-    data-messaging-sender-id="1001987551868"
-    data-app-id="1:1001987551868:web:f1d409d7cfaf962ea90ff9">
+    <!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Asistencia QR - Nube</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Asistencia QR Pro</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- qrcode.js para generar QR -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- html2canvas para descargar JPG -->
+    
+    <!-- Iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- Instala la fuente Inter -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <!-- Fuente -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-
-        /* Estilos del carnet de identificación */
-        #card-to-print {
-            width: 320px; /* Ancho fijo para impresión estándar */
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Estilos del Carnet para captura */
+        #id-card-preview {
+            width: 320px;
             height: 500px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            background: white;
             position: relative;
-            background-color: white;
-            padding: 0;
-            margin: 0 auto;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
-
-        .header-bg {
-            background-color: #6366f1; /* Indigo 500 */
+        
+        /* Diseño de fondo del carnet */
+        .card-header-bg {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            height: 140px;
             width: 100%;
-            height: 100px;
             position: absolute;
             top: 0;
             left: 0;
-            border-bottom-left-radius: 50% 10%;
-            border-bottom-right-radius: 50% 10%;
+            z-index: 0;
+            border-bottom-left-radius: 50% 20%;
+            border-bottom-right-radius: 50% 20%;
         }
 
-        #qr-placeholder {
-            margin-top: 10px; /* Espacio para que el QR no tape el ID */
-            margin-bottom: 20px;
-        }
-        
-        /* Estilos para impresión */
-        @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-            #card-to-print {
-                box-shadow: none; /* Eliminar sombra en impresión */
-                border: 1px solid #ccc; /* Borde opcional para el corte */
-                print-color-adjust: exact; /* Forzar colores y fondos */
-            }
-            .header-bg {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
-            }
-        }
+        /* Scanner container */
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; }
+
+        /* Loader */
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Modal de Login -->
-    <div id="login-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Acceso al Sistema</h2>
-            <p class="text-sm text-center text-red-500 mb-4" id="login-error-message"></p>
-            <form id="login-form">
-                <div class="mb-4">
-                    <label for="username" class="block text-sm font-medium text-gray-700">Usuario</label>
-                    <input type="text" id="username" value="admin" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+<body class="h-screen flex flex-col">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-view" class="flex-1 flex items-center justify-center bg-gray-100 p-4 z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-shield-alt text-2xl text-blue-600"></i>
                 </div>
-                <div class="mb-6">
-                    <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                    <input type="password" id="password" value="1234" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <h1 class="text-2xl font-bold text-gray-800">Acceso Seguro</h1>
+                <p class="text-gray-500 text-sm">Sistema de Asistencia QR</p>
+            </div>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="admin">
                 </div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="••••">
+                </div>
+                <div id="login-error" class="text-red-500 text-sm text-center hidden">Credenciales incorrectas</div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg">
                     Ingresar
                 </button>
-                <p class="text-xs text-center text-gray-400 mt-3">Demo: Usuario: admin | Contraseña: 1234</p>
             </form>
+            <div class="mt-4 text-center">
+                <p id="db-status" class="text-xs text-gray-400"><i class="fas fa-circle-notch fa-spin"></i> Conectando a Firebase...</p>
+            </div>
         </div>
     </div>
-    
-    <!-- Contenedor Principal de la App (Oculto hasta el Login) -->
-    <div id="main-app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 hidden">
-        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 text-center">Sistema de Gestión y Asistencia QR</h1>
 
-        <!-- Pestañas de Navegación -->
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-6">
-            <nav class="flex space-x-4" role="tablist">
-                <button id="tab-crear" onclick="showTab('crear')" class="tab-button bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium transition duration-150 ease-in-out">
-                    Generar Carnet
-                </button>
-                <button id="tab-escanear" onclick="showTab('escanear')" class="tab-button text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition duration-150 ease-in-out">
-                    Tomar Asistencia
-                </button>
-                <button id="tab-carnets" onclick="showTab('carnets')" class="tab-button text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition duration-150 ease-in-out">
-                    Gestionar Carnets
-                </button>
-                <button id="tab-lista" onclick="showTab('lista')" class="tab-button text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition duration-150 ease-in-out">
-                    Reporte Asistencia
-                </button>
-            </nav>
-        </div>
+    <!-- APP SCREEN -->
+    <div id="app-view" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-10">
+            <h1 class="text-lg font-bold text-gray-800"><i class="fas fa-qrcode text-blue-600 mr-2"></i>Asistencia QR</h1>
+            <button onclick="logout()" class="text-gray-500 hover:text-red-500"><i class="fas fa-sign-out-alt"></i></button>
+        </header>
 
-        <!-- Contenido de las Pestañas -->
-        <div id="tab-content" class="space-y-6">
-
-            <!-- Pestaña 1: Generar Carnet -->
-            <div id="crear-tab" class="tab-content flex flex-col lg:flex-row gap-6">
-                
-                <!-- Columna de Formulario -->
-                <div class="lg:w-1/2 bg-white p-6 rounded-xl shadow-lg">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Datos del Carnet</h2>
-                    <form id="carnet-form" class="space-y-4">
-                        <input type="hidden" id="carnet-doc-id">
-                        <div>
-                            <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
-                            <input type="text" id="nombre" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
-                        </div>
-                        <div>
-                            <label for="documento" class="block text-sm font-medium text-gray-700">ID / Documento</label>
-                            <input type="number" id="documento" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
-                        </div>
-                        <div>
-                            <label for="rol" class="block text-sm font-medium text-gray-700">Rol / Cargo</label>
-                            <input type="text" id="rol" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="VISITANTE">
-                        </div>
-                        <div>
-                            <label for="residencia" class="block text-sm font-medium text-gray-700">Residencia / Ciudad</label>
-                            <input type="text" id="residencia" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="Ciudad / País" required>
-                        </div>
-                        <div>
-                            <label for="vencimiento" class="block text-sm font-medium text-gray-700">Fecha de Vencimiento</label>
-                            <input type="date" id="vencimiento" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Foto de Perfil</label>
-                            <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="previewPhoto(this)">
-                            <button type="button" onclick="document.getElementById('photo-input').click()" class="mt-1 w-full bg-indigo-50 border border-indigo-200 text-indigo-700 py-2 px-4 rounded-md hover:bg-indigo-100 transition duration-150">
-                                Clic para subir foto
-                            </button>
-                            <span class="text-xs text-gray-500 block mt-1">Límite: 4MB. La foto NO se guarda en la nube, solo se usa para la impresión/JPG.</span>
-                        </div>
-                        
-                        <div class="flex space-x-4 pt-4">
-                            <button type="submit" class="flex-1 justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-bold text-white bg-green-600 hover:bg-green-700 transition duration-150">
-                                Generar y Guardar Carnet
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                
-                <!-- Columna de Carnet y Acciones -->
-                <div class="lg:w-1/2 bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Vista Previa y Acciones</h2>
-                    
-                    <!-- Área de Impresión/Descarga -->
-                    <div id="print-area">
-                        <div id="card-to-print" class="rounded-xl border border-gray-200 shadow-xl overflow-hidden">
-                            <div class="header-bg z-0"></div>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-4 relative">
+            
+            <!-- SECTION: GENERAR CARNET -->
+            <div id="tab-generar" class="tab-content active max-w-4xl mx-auto">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Formulario -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Datos del Usuario</h2>
+                        <form id="carnet-form" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500">ID / DNI</label>
+                                    <input type="text" id="inp-id" required class="w-full p-2 border rounded bg-gray-50 text-sm" placeholder="12345678">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500">Rol</label>
+                                    <select id="inp-role" class="w-full p-2 border rounded bg-gray-50 text-sm">
+                                        <option value="Estudiante">Estudiante</option>
+                                        <option value="Profesor">Profesor</option>
+                                        <option value="Staff">Staff</option>
+                                    </select>
+                                </div>
+                            </div>
                             
-                            <div class="relative z-10 text-center flex flex-col items-center pt-8 px-4">
-                                <h1 class="text-white text-xl font-bold mb-4">IDENTIFICACIÓN OFICIAL</h1>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">Nombre Completo</label>
+                                <input type="text" id="inp-name" required class="w-full p-2 border rounded bg-gray-50 text-sm" placeholder="Juan Pérez">
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">Residencia</label>
+                                <input type="text" id="inp-residence" class="w-full p-2 border rounded bg-gray-50 text-sm" placeholder="Ciudad / Dirección">
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">Vencimiento</label>
+                                <input type="date" id="inp-expiry" class="w-full p-2 border rounded bg-gray-50 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">Foto de Perfil</label>
+                                <input type="file" id="inp-photo" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            </div>
+
+                            <div class="pt-4 flex gap-2">
+                                <button type="button" onclick="previewCard()" class="flex-1 bg-gray-800 text-white py-2 rounded hover:bg-gray-900 text-sm">
+                                    <i class="fas fa-eye mr-1"></i> Previsualizar
+                                </button>
+                                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm shadow">
+                                    <i class="fas fa-save mr-1"></i> Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Visualización Carnet -->
+                    <div class="flex flex-col items-center justify-center">
+                        <div id="id-card-wrap" class="mb-4 transform scale-90 md:scale-100 transition-transform origin-top">
+                            <!-- El Carnet HTML -->
+                            <div id="id-card-preview">
+                                <div class="card-header-bg"></div>
                                 
-                                <img id="profile-photo" src="https://placehold.co/120x120/A5B4FC/ffffff?text=FOTO" onerror="this.src='https://placehold.co/120x120/A5B4FC/ffffff?text=FOTO'" class="w-32 h-32 object-cover rounded-full border-4 border-white shadow-md">
-                                
-                                <p id="card-nombre" class="text-2xl font-bold text-gray-800 mt-4">NOMBRE COMPLETO</p>
-                                <p id="card-rol" class="text-sm font-semibold text-indigo-600 uppercase mb-4">CARGO</p>
-                                
-                                <div class="flex items-center space-x-2 text-gray-600 mb-4">
-                                    <svg class="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 019.9 0L15.9 5.1A8 8 0 005.05 4.05zm-.707 9.9l-1.414 1.414A9 9 0 0110 3a9 9 0 016.364 15.243l-1.414-1.414A7 7 0 0010 5a7 7 0 00-5.757 8.957z" clip-rule="evenodd"></path></svg>
-                                    <p id="card-residencia" class="text-base font-medium">Ciudad / País</p>
+                                <div class="relative z-10 flex flex-col items-center pt-8 h-full">
+                                    <!-- Titulo -->
+                                    <h3 class="text-white text-lg font-bold tracking-widest uppercase opacity-90 mb-4">Credencial</h3>
+                                    
+                                    <!-- Foto -->
+                                    <div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200">
+                                        <img id="card-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' class='h-full w-full text-gray-400' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z' /%3E%3C/svg%3E" class="w-full h-full object-cover">
+                                    </div>
+
+                                    <!-- Nombre y Rol -->
+                                    <div class="text-center mt-4 w-full px-4">
+                                        <h2 id="card-name" class="text-xl font-bold text-gray-800 truncate">Nombre Usuario</h2>
+                                        <span id="card-role" class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full uppercase tracking-wide font-semibold mt-1">ROL</span>
+                                    </div>
+
+                                    <!-- Detalles -->
+                                    <div class="mt-6 text-center text-sm text-gray-600 space-y-1">
+                                        <p>ID: <span id="card-id" class="font-mono font-bold text-gray-800">00000000</span></p>
+                                        <p>Residencia: <span id="card-residence">-</span></p>
+                                        <p class="text-xs text-red-500 mt-1">Vence: <span id="card-expiry">--/--/----</span></p>
+                                    </div>
+
+                                    <!-- QR Code -->
+                                    <div class="mt-auto mb-6 bg-white p-2 rounded shadow-sm border">
+                                        <div id="card-qrcode"></div>
+                                    </div>
                                 </div>
-                                
-                                <p id="card-documento" class="text-sm font-mono text-gray-500 mb-2">ID: 00000000</p>
-                                
-                                <div id="qr-placeholder" class="bg-white p-1 rounded-lg border-2 border-gray-100">
-                                    <div id="qrcode"></div>
-                                </div>
-                                
-                                <p id="card-vencimiento" class="text-sm font-bold text-red-600 mt-2 mb-4">VENCE: DD/MM/AAAA</p>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div id="card-actions" class="mt-6 flex space-x-4 w-full justify-center">
-                        <button onclick="printCard()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2v5h-18v-5h2m0-4h14v-4h-14v4zM5 3h14v4h-14v-4z"></path></svg>
-                            Imprimir
-                        </button>
-                        <button onclick="downloadCard()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Descargar JPG
+                        
+                        <button onclick="downloadCardImage()" id="btn-download" class="hidden bg-green-600 text-white px-6 py-2 rounded-full shadow-lg hover:bg-green-700 transition">
+                            <i class="fas fa-download mr-2"></i> Descargar JPG
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Pestaña 2: Tomar Asistencia (Escáner) -->
-            <div id="escanear-tab" class="tab-content hidden flex flex-col lg:flex-row gap-6">
-                <div class="lg:w-1/2 bg-white p-6 rounded-xl shadow-lg">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Escáner de Asistencia</h2>
-                    <p class="text-sm text-gray-500 mb-4">Apunta la cámara a un código QR de un carnet generado por este sistema. El registro es en tiempo real.</p>
-                    <div id="video-container" class="relative w-full aspect-video rounded-lg overflow-hidden border-4 border-gray-300">
-                        <video id="qr-video" class="w-full h-full object-cover"></video>
+            <!-- SECTION: GESTIONAR -->
+            <div id="tab-gestionar" class="tab-content max-w-4xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                        <h2 class="font-semibold text-gray-700">Lista de Carnets</h2>
+                        <span id="user-count" class="text-xs bg-gray-200 px-2 py-1 rounded">0 usuarios</span>
                     </div>
-                    <div id="scan-feedback" class="mt-4 p-3 rounded-lg text-center font-bold hidden transition-all duration-300"></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-600">
+                            <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
+                                <tr>
+                                    <th class="p-4">Usuario</th>
+                                    <th class="p-4">ID</th>
+                                    <th class="p-4">Rol</th>
+                                    <th class="p-4 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Filas dinámicas aquí -->
+                                <tr><td colspan="4" class="p-4 text-center">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: ASISTENCIA -->
+            <div id="tab-asistencia" class="tab-content max-w-md mx-auto">
+                
+                <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+                    <h2 class="text-center font-bold text-gray-800 mb-2">Escanear QR</h2>
+                    <div id="reader" class="bg-black text-white h-64 flex items-center justify-center mb-2">
+                        <span class="text-sm text-gray-400">Cámara inactiva</span>
+                    </div>
+                    <div id="scan-result" class="hidden p-3 rounded-lg text-center text-sm font-semibold mt-2"></div>
                 </div>
 
-                <div class="lg:w-1/2 bg-white p-6 rounded-xl shadow-lg">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Últimos Registros (Tiempo Real)</h2>
-                    <ul id="realtime-attendance-list" class="space-y-2 text-sm max-h-96 overflow-y-auto">
-                        <li class="p-3 bg-gray-50 rounded-lg text-gray-500 text-center">Esperando el primer escaneo...</li>
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-3 bg-gray-50 border-b">
+                        <h3 class="font-semibold text-gray-700 text-sm">Registros de Hoy</h3>
+                    </div>
+                    <ul id="attendance-list" class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                        <!-- Logs dinámicos -->
+                        <li class="p-4 text-center text-xs text-gray-400">Sin registros hoy</li>
                     </ul>
                 </div>
+
             </div>
 
-            <!-- Pestaña 3: Gestionar Carnets -->
-            <div id="carnets-tab" class="tab-content hidden bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">Lista de Carnets Creados (Nube)</h2>
-                <input type="text" id="carnet-search-input" onkeyup="filterCarnetList()" placeholder="Buscar por Nombre, ID o Ciudad..." class="mb-4 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Residencia</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="carnet-list-body" class="bg-white divide-y divide-gray-200">
-                            <!-- Los carnets se cargarán aquí -->
-                            <tr><td colspan="5" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">Cargando carnets desde la nube...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        </main>
 
-            <!-- Pestaña 4: Reporte Asistencia -->
-            <div id="lista-tab" class="tab-content hidden bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">Reporte Histórico de Asistencia (Nube)</h2>
-                <div class="flex justify-end mb-4">
-                    <button onclick="exportToCSV()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Exportar a CSV
-                    </button>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Residencia</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y Hora</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendance-list-body" class="bg-white divide-y divide-gray-200">
-                            <!-- La lista de asistencia se cargará aquí -->
-                            <tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">Cargando registros desde la nube...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <!-- Bottom Navigation (Mobile Friendly) -->
+        <nav class="bg-white shadow-up border-t flex justify-around p-2 pb-safe z-20">
+            <button onclick="switchTab('tab-generar')" class="nav-btn flex flex-col items-center p-2 text-blue-600 w-full" data-target="tab-generar">
+                <i class="fas fa-id-card text-xl mb-1"></i>
+                <span class="text-xs font-medium">Carnet</span>
+            </button>
+            <button onclick="switchTab('tab-gestionar')" class="nav-btn flex flex-col items-center p-2 text-gray-400 w-full" data-target="tab-gestionar">
+                <i class="fas fa-users text-xl mb-1"></i>
+                <span class="text-xs font-medium">Gestión</span>
+            </button>
+            <button onclick="switchTab('tab-asistencia')" class="nav-btn flex flex-col items-center p-2 text-gray-400 w-full" data-target="tab-asistencia">
+                <i class="fas fa-qrcode text-xl mb-1"></i>
+                <span class="text-xs font-medium">Escanear</span>
+            </button>
+        </nav>
     </div>
-    
-    <!-- Librerías de Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
-    
-    <!-- Script de la Aplicación -->
-    <script>
-        // ===================================================================================
-        // === [1] CONFIGURACIÓN DE FIREBASE (Lectura de atributos HTML) =====================
-        // ===================================================================================
-        const html = document.documentElement;
-        
-        // Objeto de configuración construido a partir de los atributos data- en la etiqueta <html>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-xl transform translate-x-full transition-transform duration-300 z-50 flex items-center">
+        <i id="toast-icon" class="fas fa-info-circle mr-3"></i>
+        <span id="toast-message">Notificación</span>
+    </div>
+
+    <script type="module">
+        // --- 1. FIREBASE CONFIG & INIT ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const firebaseConfig = {
-            apiKey: html.getAttribute('data-api-key'), 
-            authDomain: html.getAttribute('data-auth-domain'),
-            projectId: html.getAttribute('data-project-id'),
-            storageBucket: html.getAttribute('data-storage-bucket'),
-            messagingSenderId: html.getAttribute('data-messaging-sender-id'),
-            appId: html.getAttribute('data-app-id')
+            apiKey: "AIzaSyBo9YlpqRx04DmnGEZ7sw5M07AGyC7eRG4",
+            authDomain: "app-asistecia-qr.firebaseapp.com",
+            projectId: "app-asistecia-qr",
+            storageBucket: "app-asistecia-qr.firebasestorage.app",
+            messagingSenderId: "1001987551868",
+            appId: "1:1001987551868:web:f1d409d7cfaf962ea90ff9",
+            measurementId: "G-FNR6BXHPC3"
         };
-        
-        // Inicialización de Firebase
-        const { initializeApp } = firebase;
-        const { getAuth, signInAnonymously, onAuthStateChanged } = firebase.auth;
-        const { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, where, setLogLevel } = firebase.firestore;
-        
-        // Inicializar la aplicación de Firebase
+
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
         const auth = getAuth(app);
-        
-        // Activación de logs de Firestore (Necesario para debuggear problemas de conexión/reglas)
-        // Esto ayudará a ver si hay un error 403 (Permiso denegado)
-        setLogLevel('debug');
+        const db = getFirestore(app);
 
-        let globalCarnets = []; // Lista global de carnets para la búsqueda
+        // Variables Globales del Sistema
+        const APP_ID = "asistencia-qr-v1"; // Identificador para la ruta artifacts
+        let currentUser = null;
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+        let lastScannedCode = null;
+        let allStudentsCache = []; // Caché local para búsquedas rápidas al escanear
+        let scanCooldown = false;
 
-        // ===================================================================================
-        // === [2] LÓGICA DE LOGIN Y AUTENTICACIÓN ===========================================
-        // ===================================================================================
-        
-        const loginModal = document.getElementById('login-modal');
-        const mainAppContainer = document.getElementById('main-app-container');
-        const loginForm = document.getElementById('login-form');
-        const loginErrorMessage = document.getElementById('login-error-message');
-        
-        const VALID_USER = "admin";
-        const VALID_PASS = "1234";
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (username === VALID_USER && password === VALID_PASS) {
-                // Si las credenciales JS son correctas, autenticamos anónimamente en Firebase
-                loginErrorMessage.textContent = "Intentando conectar con la nube...";
-                try {
-                    // Intentar iniciar sesión anónimamente
-                    await signInAnonymously(auth);
-                    // onAuthStateChanged se dispara si tiene éxito
-                } catch (error) {
-                    console.error("Error en la autenticación de Firebase:", error);
-                    loginErrorMessage.textContent = "Error de conexión con la nube. Revisa la consola para más detalles.";
-                }
-            } else {
-                loginErrorMessage.textContent = "Usuario o contraseña incorrectos.";
-            }
-        });
-
-        // Manejador del estado de autenticación de Firebase
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // Usuario autenticado
-                loginModal.classList.add('hidden');
-                mainAppContainer.classList.remove('hidden');
-                console.log("Usuario autenticado en Firebase con UID:", user.uid);
-                showTab('crear'); // Mostrar la pestaña de creación por defecto
+        // --- 2. AUTHENTICATION (System Backend) ---
+        // Iniciamos sesión anónima en Firebase para tener permisos de lectura/escritura en Firestore
+        // El login "admin" es solo una puerta visual.
+        async function initAuth() {
+            try {
+                const userCredential = await signInAnonymously(auth);
+                currentUser = userCredential.user;
+                console.log("Conectado a Firebase como:", currentUser.uid);
+                document.getElementById('db-status').innerHTML = '<i class="fas fa-wifi text-green-500"></i> Sistema Conectado';
                 
-                // Iniciar listeners de Firestore
-                startFirestoreListeners();
+                // Iniciar listeners una vez autenticado
+                startStudentsListener();
+                startAttendanceListener();
+            } catch (error) {
+                console.error("Error Auth:", error);
+                document.getElementById('db-status').innerHTML = '<span class="text-red-500">Error de conexión</span>';
+            }
+        }
+        initAuth();
 
+        // --- 3. UI LOGIN LOGIC ---
+        const loginForm = document.getElementById('login-form');
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            if(u === 'admin' && p === '1234') {
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('app-view').classList.remove('hidden');
+                document.getElementById('app-view').classList.add('flex');
             } else {
-                // Usuario no autenticado (o deslogueado)
-                loginModal.classList.remove('hidden');
-                mainAppContainer.classList.add('hidden');
-                console.log("Esperando autenticación...");
+                document.getElementById('login-error').classList.remove('hidden');
             }
         });
-        
-        // ===================================================================================
-        // === [3] SINCRONIZACIÓN CON FIRESTORE (NUBE) =======================================
-        // ===================================================================================
-        
-        function startFirestoreListeners() {
-            // 1. Escuchar Carnets (Lista de Carnets Creados)
-            const carnetsCollection = collection(db, "carnets");
-            onSnapshot(carnetsCollection, (snapshot) => {
-                const carnets = [];
-                snapshot.forEach(doc => {
-                    carnets.push({ id: doc.id, ...doc.data() });
-                });
-                renderCarnetList(carnets);
-                globalCarnets = carnets; // Actualizar lista global para búsqueda
-            }, (error) => {
-                console.error("Error al escuchar carnets (Reglas o Conexión):", error);
-            });
+
+        window.logout = () => {
+            location.reload();
+        };
+
+        // --- 4. NAVIGATION LOGIC ---
+        window.switchTab = (tabId) => {
+            // UI Update
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
             
-            // 2. Escuchar Asistencia (Reporte Histórico)
-            const asistenciasCollection = collection(db, "asistencias");
-            const q = query(asistenciasCollection, orderBy("timestamp", "desc"));
-
-            onSnapshot(q, (snapshot) => {
-                const asistencias = [];
-                snapshot.forEach(doc => {
-                    asistencias.push({ id: doc.id, ...doc.data() });
-                });
-                renderAttendanceList(asistencias);
-                renderRealtimeAttendance(asistencias.slice(0, 10)); // Mostrar solo los 10 más recientes
-            }, (error) => {
-                console.error("Error al escuchar asistencias (Reglas o Conexión):", error);
-            });
-        }
-        
-        // ===================================================================================
-        // === [4] LÓGICA DE PESTAÑAS Y UI ===================================================
-        // ===================================================================================
-
-        let currentTab = 'crear';
-        function showTab(tabId) {
-            const tabs = ['crear', 'escanear', 'carnets', 'lista'];
-            tabs.forEach(id => {
-                document.getElementById(`${id}-tab`).classList.add('hidden');
-                document.getElementById(`tab-${id}`).classList.remove('bg-indigo-600', 'text-white');
-                document.getElementById(`tab-${id}`).classList.add('text-gray-600', 'hover:bg-gray-100');
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                if(el.dataset.target === tabId) {
+                    el.classList.add('text-blue-600');
+                    el.classList.remove('text-gray-400');
+                } else {
+                    el.classList.remove('text-blue-600');
+                    el.classList.add('text-gray-400');
+                }
             });
 
-            document.getElementById(`${tabId}-tab`).classList.remove('hidden');
-            document.getElementById(`tab-${tabId}`).classList.add('bg-indigo-600', 'text-white');
-            document.getElementById(`tab-${tabId}`).classList.remove('text-gray-600', 'hover:bg-gray-100');
-            currentTab = tabId;
-
-            if (tabId === 'escanear') {
+            // Logic Specifics
+            if(tabId === 'tab-asistencia') {
                 startScanner();
             } else {
                 stopScanner();
             }
-        }
+        };
+
+        // --- 5. CARNET GENERATION LOGIC ---
         
-        // ===================================================================================
-        // === [5] GESTIÓN DE CARNETS (CRUD) =================================================
-        // ===================================================================================
-
-        const carnetForm = document.getElementById('carnet-form');
-        let carnetDocId = null; // Para saber si estamos editando o creando
-
-        carnetForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nombre = document.getElementById('nombre').value;
-            const documento = document.getElementById('documento').value;
-            const rol = document.getElementById('rol').value;
-            const residencia = document.getElementById('residencia').value;
-            const vencimiento = document.getElementById('vencimiento').value;
-            const photoBase64 = document.getElementById('profile-photo').src.includes("placehold") ? null : document.getElementById('profile-photo').src;
-            
-            // JSON que se guarda en el QR (Ligero y con datos clave)
-            const qrData = JSON.stringify({
-                id: documento,
-                nombre: nombre,
-                residencia: residencia
-            });
-
-            // Objeto que se guarda en Firestore (Datos completos del carnet)
-            const carnetData = {
-                nombre,
-                documento,
-                rol,
-                residencia,
-                vencimiento,
-                qrData,
-                createdAt: new Date(),
-                // NOTA: No guardamos photoBase64 en Firestore por el límite de tamaño de documentos.
-                // La foto solo se usa en el instante de la generación/descarga.
-            };
-
-            try {
-                if (document.getElementById('carnet-doc-id').value) {
-                    // Modo Edición: Actualizar documento
-                    const id = document.getElementById('carnet-doc-id').value;
-                    const docRef = doc(db, "carnets", id);
-                    await updateDoc(docRef, carnetData);
-                    // Uso un mensaje de feedback visual en lugar de alert
-                    showFeedback(`Carnet de ${nombre} actualizado exitosamente.`, 'bg-blue-100 text-blue-700');
-                } else {
-                    // Modo Creación: Añadir nuevo documento
-                    await addDoc(collection(db, "carnets"), carnetData);
-                    showFeedback(`Carnet de ${nombre} creado y guardado en la nube.`, 'bg-green-100 text-green-700');
+        // Image Processing (File to Base64)
+        let currentPhotoBase64 = "";
+        document.getElementById('inp-photo').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                // Validación básica de tamaño (aprox 500KB límite suave)
+                if(file.size > 500000) {
+                    showToast("La imagen es muy grande. Intenta usar una más pequeña.", "error");
+                    // No return, tratamos de procesarla igual pero aviso
                 }
-                
-                // Después de guardar/editar, generar la vista previa
-                generateCard(nombre, rol, documento, residencia, vencimiento, photoBase64);
-                
-                // Limpiar modo edición
-                document.getElementById('carnet-doc-id').value = ''; 
-            } catch (error) {
-                console.error("Error al guardar/editar el carnet:", error);
-                showFeedback("Error al interactuar con Firestore. Revisa tu consola para detalles.", 'bg-red-100 text-red-700');
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    currentPhotoBase64 = reader.result;
+                    document.getElementById('card-img').src = currentPhotoBase64;
+                }
+                reader.readAsDataURL(file);
             }
         });
-        
-        function generateCard(nombre, rol, documento, residencia, vencimiento, photoUrl) {
-            // Actualizar vista previa
-            document.getElementById('card-nombre').textContent = nombre;
-            document.getElementById('card-rol').textContent = rol;
-            document.getElementById('card-documento').textContent = `ID: ${documento}`;
-            document.getElementById('card-residencia').textContent = residencia;
-            document.getElementById('card-vencimiento').textContent = `VENCE: ${formatDateForCard(vencimiento)}`;
-            
-            if (photoUrl) {
-                document.getElementById('profile-photo').src = photoUrl;
-            } else {
-                document.getElementById('profile-photo').src = "https://placehold.co/120x120/A5B4FC/ffffff?text=FOTO";
-            }
 
-            // Generar el QR
-            const qrData = JSON.stringify({ id: documento, nombre: nombre, residencia: residencia });
-            document.getElementById('qrcode').innerHTML = '';
-            new QRCode(document.getElementById('qrcode'), {
-                text: qrData,
-                width: 140,
-                height: 140,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-        }
-        
-        function previewPhoto(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            // Límite aumentado a 4 Megabytes (4 * 1024 * 1024)
-            if(file.size > 4 * 1024 * 1024) { 
-                // Usar mensaje de feedback temporal en lugar de alert
-                showFeedback("La imagen es muy pesada. El límite es de 4MB.", 'bg-red-100 text-red-700');
-                input.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                document.getElementById('profile-photo').src = e.target.result;
+        // Generar QR y Preview
+        window.previewCard = () => {
+            const data = {
+                id: document.getElementById('inp-id').value,
+                name: document.getElementById('inp-name').value,
+                role: document.getElementById('inp-role').value,
+                residence: document.getElementById('inp-residence').value,
+                expiry: document.getElementById('inp-expiry').value
             };
-            reader.readAsDataURL(file);
-        }
-        
-        function formatDateForCard(dateString) {
-            const date = new Date(dateString + 'T00:00:00'); // Añadir T00:00:00 para evitar problemas de zona horaria
-            return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
-        
-        function renderCarnetList(carnets) {
-            const tbody = document.getElementById('carnet-list-body');
-            tbody.innerHTML = '';
-            if (carnets.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">No hay carnets creados.</td></tr>';
-                return;
+
+            if(!data.id || !data.name) {
+                showToast("ID y Nombre son obligatorios", "error");
+                return false;
             }
 
-            carnets.forEach(carnet => {
-                const row = `
-                    <tr data-search-terms="${carnet.nombre.toLowerCase()} ${carnet.documento} ${carnet.residencia.toLowerCase()}">
-                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${carnet.nombre}</td>
-                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">${carnet.documento}</td>
-                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">${carnet.residencia}</td>
-                        <td class="px-3 py-2 whitespace-nowrap text-sm text-red-600 font-semibold">${formatDateForCard(carnet.vencimiento)}</td>
-                        <td class="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="editCarnet('${carnet.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
-                            <button onclick="deleteCarnet('${carnet.id}', '${carnet.nombre}')" class="text-red-600 hover:text-red-900">Borrar</button>
-                        </td>
-                    </tr>
-                `;
-                tbody.insertAdjacentHTML('beforeend', row);
+            // Update UI Text
+            document.getElementById('card-name').innerText = data.name;
+            document.getElementById('card-role').innerText = data.role;
+            document.getElementById('card-id').innerText = data.id;
+            document.getElementById('card-residence').innerText = data.residence || "N/A";
+            document.getElementById('card-expiry').innerText = data.expiry || "Indefinido";
+
+            // Generate QR
+            const qrContainer = document.getElementById('card-qrcode');
+            qrContainer.innerHTML = ""; // Clear prev
+            new QRCode(qrContainer, {
+                text: data.id, // El QR contiene SOLO el ID
+                width: 80,
+                height: 80,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
             });
-        }
-        
-        // Función de Búsqueda de Carnets (Nueva en v5.0)
-        function filterCarnetList() {
-            const input = document.getElementById('carnet-search-input');
-            const filter = input.value.toLowerCase();
-            const rows = document.querySelectorAll('#carnet-list-body tr');
 
-            rows.forEach(row => {
-                const searchTerms = row.getAttribute('data-search-terms');
-                if (searchTerms && searchTerms.includes(filter)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-        
-        function editCarnet(id) {
-            const carnet = globalCarnets.find(c => c.id === id);
-            if (!carnet) return;
+            document.getElementById('btn-download').classList.remove('hidden');
+            return true;
+        };
 
-            document.getElementById('carnet-doc-id').value = carnet.id;
-            document.getElementById('nombre').value = carnet.nombre;
-            document.getElementById('documento').value = carnet.documento;
-            document.getElementById('rol').value = carnet.rol;
-            document.getElementById('residencia').value = carnet.residencia;
-            document.getElementById('vencimiento').value = carnet.vencimiento;
+        // Guardar en Firestore
+        document.getElementById('carnet-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!currentUser) { showToast("Sin conexión a base de datos", "error"); return; }
+            if(!previewCard()) return; // Validar y generar vista primero
 
-            // Cambiar a la pestaña de creación
-            showTab('crear');
-            
-            // Generar vista previa con datos de edición (la foto debe subirse de nuevo si se quiere)
-            generateCard(carnet.nombre, carnet.rol, carnet.documento, carnet.residencia, carnet.vencimiento, null); 
-            
-            showFeedback(`Cargando datos de ${carnet.nombre} para editar.`, 'bg-blue-100 text-blue-700');
-        }
+            const userData = {
+                id_card: document.getElementById('inp-id').value,
+                name: document.getElementById('inp-name').value,
+                role: document.getElementById('inp-role').value,
+                residence: document.getElementById('inp-residence').value,
+                expiry: document.getElementById('inp-expiry').value,
+                photo: currentPhotoBase64, // Guardamos la foto en base64 (cuidado con el tamaño)
+                createdAt: serverTimestamp()
+            };
 
-        async function deleteCarnet(id, nombre) {
-            // Reemplazo de window.confirm() por un modal simple (aunque no lo construimos, el concepto es el mismo)
-            if (!confirm(`¿Está seguro de que desea eliminar el carnet de ${nombre}? Esta acción es permanente.`)) return;
+            // Verificar si el ID ya existe (en caché local para evitar lecturas extras o query compleja)
+            const exists = allStudentsCache.some(s => s.id_card === userData.id_card);
+            if(exists) {
+                showToast("¡Este ID ya está registrado!", "error");
+                return;
+            }
 
             try {
-                await deleteDoc(doc(db, "carnets", id));
-                showFeedback(`Carnet de ${nombre} eliminado de la nube.`, 'bg-red-100 text-red-700');
-            } catch (error) {
-                console.error("Error al borrar el carnet:", error);
-                showFeedback("Error al borrar el carnet. Revisa tus reglas de Firestore.", 'bg-red-100 text-red-700');
+                // Ruta pública para que todos los admins vean los estudiantes
+                const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'students');
+                await addDoc(colRef, userData);
+                showToast("Usuario guardado correctamente", "success");
+                // Reset form opcional
+                // e.target.reset();
+            } catch (err) {
+                console.error(err);
+                showToast("Error al guardar: " + err.message, "error");
             }
-        }
-        
-        // ===================================================================================
-        // === [6] LÓGICA DE IMPRESIÓN Y DESCARGA (html2canvas) ==============================
-        // ===================================================================================
+        });
 
-        function printCard() {
-            window.print();
-        }
-
-        function downloadCard() {
-            const cardElement = document.getElementById('card-to-print');
-            
-            // html2canvas captura el elemento y lo convierte en una imagen
-            html2canvas(cardElement, {
-                scale: 2, // Aumentar escala para mejor calidad
-                useCORS: true // Necesario para imágenes de placeholder
-            }).then(canvas => {
-                // Convertir el canvas a JPG y forzar la descarga
-                const imgData = canvas.toDataURL('image/jpeg');
+        // Descargar JPG
+        window.downloadCardImage = () => {
+            const element = document.getElementById('id-card-preview');
+            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
                 const link = document.createElement('a');
-                const nombre = document.getElementById('card-nombre').textContent.replace(/\s+/g, '_');
-                link.download = `Carnet_${nombre}.jpg`;
-                link.href = imgData;
+                link.download = `carnet-${document.getElementById('inp-id').value}.jpg`;
+                link.href = canvas.toDataURL("image/jpeg");
                 link.click();
             });
-        }
-        
-        // ===================================================================================
-        // === [7] LÓGICA DEL ESCÁNER Y ASISTENCIA ===========================================
-        // ===================================================================================
+        };
 
-        const qrVideo = document.getElementById('qr-video');
-        const scanFeedback = document.getElementById('scan-feedback');
-        let scanner = null;
-        let lastScanTime = 0;
-        const cooldownTime = 30000; // 30 segundos de cooldown (30,000 milisegundos)
-
-        async function startScanner() {
-            if (scanner) return; // Ya está corriendo
-
-            try {
-                // Pedir acceso a la cámara y reproducir el stream
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                qrVideo.srcObject = stream;
-                qrVideo.play();
-                scanner = setInterval(scanFrame, 100); // Intenta escanear cada 100ms
-                console.log("Escáner iniciado.");
-            } catch (err) {
-                console.error("Error al acceder a la cámara:", err);
-                // Si la cámara falla, mostramos feedback y simulamos la asistencia para la demo
-                showFeedback("Error: No se pudo acceder a la cámara. Simulando escaneo...", 'bg-red-100 text-red-700');
-                // Si la cámara falla, iniciamos la simulación automática
-                scanner = setInterval(simulateScanSuccess, 3000); 
-            }
-        }
-
-        function stopScanner() {
-            if (scanner) {
-                clearInterval(scanner);
-                scanner = null;
-                if (qrVideo.srcObject) {
-                    qrVideo.srcObject.getTracks().forEach(track => track.stop());
-                }
-                console.log("Escáner detenido.");
-            }
-        }
-
-        function scanFrame() {
-             // Lógica de escaneo real (Omitida por la dificultad de librerías en un solo archivo)
-             // En su lugar, usamos un simulador con temporizador:
-             if (Math.random() < 0.005) { // 0.5% de probabilidad de simular un escaneo exitoso en cada frame
-                simulateScanSuccess();
-             }
-        }
-        
-        // Función de simulación de escaneo para propósitos de demostración
-        async function simulateScanSuccess() {
-            // Nota: En un entorno real, la librería de escaneo devuelve el 'rawText' del QR
-            if (globalCarnets.length === 0) {
-                 // Si no hay carnets, no se puede simular
-                 return;
-            }
+        // --- 6. DATA MANAGEMENT (CRUD) ---
+        function startStudentsListener() {
+            if (!currentUser) return;
+            const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'students');
             
-            const dummyCarnet = globalCarnets[Math.floor(Math.random() * globalCarnets.length)];
-            
-            const qrText = JSON.stringify({
-                id: dummyCarnet.documento,
-                nombre: dummyCarnet.nombre,
-                residencia: dummyCarnet.residencia
-            });
-
-            try {
-                const qrData = JSON.parse(qrText);
-                const currentTime = Date.now();
-
-                // 1. Verificar Cooldown (Anti-Doble Marcado)
-                if (currentTime - lastScanTime < cooldownTime) {
-                    showFeedback(`¡Ya Marcó! Espere ${cooldownTime / 1000}s. (${qrData.nombre})`, 'bg-yellow-100 text-yellow-700');
+            // Query simple, sin orderBy complejo para evitar errores de índice
+            onSnapshot(colRef, (snapshot) => {
+                const tbody = document.getElementById('users-table-body');
+                tbody.innerHTML = "";
+                allStudentsCache = []; // Actualizar caché
+                
+                if(snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400">No hay usuarios registrados</td></tr>';
+                    document.getElementById('user-count').innerText = "0 usuarios";
                     return;
                 }
 
-                // 2. Guardar Asistencia
-                const asistenciaRef = collection(db, "asistencias");
-                await addDoc(asistenciaRef, {
-                    id: qrData.id,
-                    nombre: qrData.nombre,
-                    residencia: qrData.residencia,
-                    timestamp: new Date().toISOString(),
+                snapshot.forEach(docSnap => {
+                    const student = docSnap.data();
+                    student.docId = docSnap.id;
+                    allStudentsCache.push(student);
+
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b hover:bg-gray-50";
+                    tr.innerHTML = `
+                        <td class="p-3 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
+                                ${student.photo ? `<img src="${student.photo}" class="w-full h-full object-cover">` : '<i class="fas fa-user text-gray-400 p-2"></i>'}
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800">${student.name}</div>
+                            </div>
+                        </td>
+                        <td class="p-3 font-mono text-xs">${student.id_card}</td>
+                        <td class="p-3"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${student.role}</span></td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteUser('${docSnap.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded transition">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 });
-                
-                // 3. Feedback y Cooldown
-                lastScanTime = currentTime;
-                showFeedback(`Registro EXITOSO: ${qrData.nombre}`, 'bg-green-100 text-green-700');
-                
-            } catch (e) {
-                showFeedback("QR Inválido o Dañado.", 'bg-red-100 text-red-700');
-            }
-        }
-        
-        // Función general de feedback temporal
-        function showFeedback(message, className) {
-            // Usamos un modal flotante si está en la pestaña de escaneo, o un alert simple para otras tabs
-            if (currentTab === 'escanear') {
-                scanFeedback.textContent = message;
-                scanFeedback.className = `mt-4 p-3 rounded-lg text-center font-bold ${className} block`;
-                
-                setTimeout(() => {
-                    scanFeedback.classList.add('hidden');
-                }, 5000);
-            } else {
-                 // Usamos un simple console.log y confirm para las otras pestañas
-                 console.log(`FEEDBACK: ${message}`);
-            }
-        }
-
-        // ===================================================================================
-        // === [8] REPORTE DE ASISTENCIA Y RENDERING =========================================
-        // ===================================================================================
-
-        function renderAttendanceList(asistencias) {
-            const tbody = document.getElementById('attendance-list-body');
-            tbody.innerHTML = '';
-
-            if (asistencias.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">No hay registros de asistencia.</td></tr>';
-                return;
-            }
-
-            asistencias.forEach(asistencia => {
-                const date = new Date(asistencia.timestamp);
-                const formattedDate = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const formattedTime = date.toLocaleTimeString('es-ES');
-
-                const row = `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${asistencia.nombre}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${asistencia.id}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${asistencia.residencia}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formattedDate} ${formattedTime}</td>
-                    </tr>
-                `;
-                tbody.insertAdjacentHTML('beforeend', row);
+                document.getElementById('user-count').innerText = `${allStudentsCache.length} usuarios`;
+            }, (error) => {
+                console.error("Error obteniendo usuarios:", error);
             });
         }
-        
-        function renderRealtimeAttendance(asistencias) {
-            const ul = document.getElementById('realtime-attendance-list');
-            ul.innerHTML = '';
 
-            if (asistencias.length === 0) {
-                ul.innerHTML = '<li class="p-3 bg-gray-50 rounded-lg text-gray-500 text-center">Esperando el primer escaneo...</li>';
-                return;
-            }
-
-            asistencias.forEach(asistencia => {
-                const date = new Date(asistencia.timestamp);
-                const formattedTime = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-                const listItem = `
-                    <li class="p-3 bg-gray-50 rounded-lg border-l-4 border-green-500 shadow-sm">
-                        <span class="font-semibold text-gray-800">${asistencia.nombre}</span>
-                        <span class="text-xs text-gray-500 ml-2">(${asistencia.id})</span>
-                        <span class="block text-sm text-gray-600">${formattedTime}</span>
-                    </li>
-                `;
-                ul.insertAdjacentHTML('beforeend', listItem);
-            });
-        }
-        
-        function exportToCSV() {
-            const table = document.getElementById('attendance-list-body');
-            let csv = 'Nombre,ID,Residencia,Fecha y Hora\n';
-
-            // Iterar sobre las filas de la tabla
-            for (const row of table.rows) {
-                let rowData = [];
-                for (const cell of row.cells) {
-                    rowData.push(cell.textContent.trim());
+        window.deleteUser = async (docId) => {
+            if(confirm("¿Estás seguro de borrar este usuario?")) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'students', docId));
+                    showToast("Usuario eliminado", "success");
+                } catch (e) {
+                    showToast("Error al eliminar", "error");
                 }
-                csv += rowData.join(',') + '\n';
             }
+        };
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            if (link.download !== undefined) { 
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", "reporte_asistencia.csv");
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+        // --- 7. ATTENDANCE & SCANNER LOGIC ---
+
+        function startScanner() {
+            if(html5QrcodeScanner) return; // Ya existe
+
+            // Configurar scanner
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                config, 
+                onScanSuccess
+            ).catch(err => {
+                console.log("Error iniciando cámara", err);
+                document.getElementById('reader').innerHTML = '<p class="text-red-500 text-center p-4">Permiso de cámara denegado o error.</p>';
+            });
+        }
+
+        function stopScanner() {
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                }).catch(err => console.log(err));
             }
         }
-        
-        // Inicializar la vista previa del carnet al cargar
-        document.addEventListener('DOMContentLoaded', () => {
-            // Se inicializa el carnet con datos de ejemplo
-            generateCard("NOMBRE COMPLETO", "CARGO", "00000000", "Ciudad / País", "2025-12-31", null); 
-        });
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            if(scanCooldown) return;
+            scanCooldown = true; // Evitar lecturas múltiples muy rápidas
+
+            // Feedback visual inmediato
+            const resDiv = document.getElementById('scan-result');
+            resDiv.classList.remove('hidden');
+            resDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando ID: ${decodedText}`;
+            resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-yellow-100 text-yellow-800";
+
+            // 1. Validar si el usuario existe en nuestro sistema (Usando caché local)
+            const student = allStudentsCache.find(s => s.id_card === decodedText);
+
+            if(!student) {
+                beep(false);
+                resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-red-100 text-red-800";
+                resDiv.innerHTML = `<i class="fas fa-times-circle"></i> ID Desconocido: ${decodedText}`;
+                setTimeout(() => { scanCooldown = false; }, 2000);
+                return;
+            }
+
+            // 2. Validar Anti-Doble Marcado (Consultando logs de hoy en caché o DB)
+            // Para simplificar y cumplir regla de "No Complex Queries", filtramos en memoria los logs de hoy
+            // que obtenemos del listener de abajo.
+            const todayStr = new Date().toLocaleDateString();
+            const alreadyChecked = todaysAttendanceCache.some(log => log.studentId === decodedText);
+
+            if(alreadyChecked) {
+                beep(false);
+                resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-orange-100 text-orange-800";
+                resDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${student.name} ya marcó hoy.`;
+                setTimeout(() => { scanCooldown = false; }, 2500);
+                return;
+            }
+
+            // 3. Registrar Asistencia
+            try {
+                beep(true);
+                const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'attendance');
+                await addDoc(colRef, {
+                    studentId: decodedText,
+                    studentName: student.name,
+                    timestamp: serverTimestamp(),
+                    dateStr: todayStr, // Campo auxiliar para filtrar fácil
+                    role: student.role
+                });
+
+                resDiv.className = "p-3 rounded-lg text-center text-sm font-semibold mt-2 bg-green-100 text-green-800";
+                resDiv.innerHTML = `<i class="fas fa-check-circle"></i> ¡Bienvenido, ${student.name}!`;
+
+            } catch (error) {
+                console.error(error);
+                resDiv.innerText = "Error de conexión al guardar.";
+            }
+
+            // Reset cooldown
+            setTimeout(() => { 
+                scanCooldown = false; 
+                resDiv.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Attendance List Management
+        let todaysAttendanceCache = [];
+
+        function startAttendanceListener() {
+            if (!currentUser) return;
+            const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'attendance');
+            
+            // Obtenemos todo (Idealmente usaríamos where('dateStr', '==', today) pero requiere crear indice compuesto si ordenamos)
+            // Traemos los últimos 50 registros por simplicidad y filtramos en JS
+            const q = query(colRef, orderBy('timestamp', 'desc'), limit(50));
+
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('attendance-list');
+                list.innerHTML = "";
+                todaysAttendanceCache = [];
+                const todayStr = new Date().toLocaleDateString();
+
+                if(snapshot.empty) {
+                    list.innerHTML = '<li class="p-4 text-center text-xs text-gray-400">Sin registros</li>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const log = doc.data();
+                    // Filtramos solo los de hoy para el caché de validación
+                    // Nota: Firestore Timestamp a Date JS
+                    let logDateStr = "N/A";
+                    let timeStr = "--:--";
+                    if(log.timestamp) {
+                        const dateObj = log.timestamp.toDate();
+                        logDateStr = dateObj.toLocaleDateString();
+                        timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        if(logDateStr === todayStr) {
+                            todaysAttendanceCache.push(log);
+                        }
+                    }
+
+                    // Renderizar solo si es hoy (Visualmente)
+                    if(logDateStr === todayStr) {
+                        const li = document.createElement('li');
+                        li.className = "p-3 flex justify-between items-center";
+                        li.innerHTML = `
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">${log.studentName}</p>
+                                <p class="text-xs text-gray-500">${log.role} • ID: ${log.studentId}</p>
+                            </div>
+                            <span class="text-xs font-mono bg-green-50 text-green-600 px-2 py-1 rounded">${timeStr}</span>
+                        `;
+                        list.appendChild(li);
+                    }
+                });
+            }, (err) => console.log("Error attendance listener", err));
+        }
+
+        // --- UTILS ---
+        function showToast(msg, type="info") {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const txt = document.getElementById('toast-message');
+            
+            txt.innerText = msg;
+            toast.classList.remove('translate-x-full');
+            
+            if(type === 'error') {
+                toast.classList.replace('bg-gray-800', 'bg-red-600');
+                icon.className = "fas fa-times-circle mr-3";
+            } else if (type === 'success') {
+                toast.classList.replace('bg-gray-800', 'bg-green-600');
+                icon.className = "fas fa-check-circle mr-3";
+            } else {
+                toast.classList.replace('bg-red-600', 'bg-gray-800');
+                toast.classList.replace('bg-green-600', 'bg-gray-800');
+                icon.className = "fas fa-info-circle mr-3";
+            }
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+
+        function beep(success) {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+
+            if(success) {
+                oscillator.type = "sine";
+                oscillator.frequency.value = 800;
+                gainNode.gain.value = 0.1;
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 100);
+            } else {
+                oscillator.type = "sawtooth";
+                oscillator.frequency.value = 200;
+                gainNode.gain.value = 0.1;
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 300);
+            }
+        }
 
     </script>
 </body>
-</html>
+</html>                                            
+        
+                                        
