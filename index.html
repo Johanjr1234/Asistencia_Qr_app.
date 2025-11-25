@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asistencia QR Pro V5</title>
+    <title>Asistencia QR Pro V6</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -18,7 +18,6 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; height: 100vh; overflow: hidden; }
         
-        /* Ajuste para que el contenido no se corte */
         .tab-content { display: none; height: 100%; overflow-y: auto; padding-bottom: 120px; }
         .tab-content.active { display: block; }
 
@@ -63,7 +62,7 @@
 
     <div id="app-view" class="hidden flex-col h-full w-full">
         <header class="bg-white border-b px-4 py-3 flex justify-between items-center z-20 shadow-sm shrink-0">
-            <h1 class="font-bold text-gray-800">Asistencia V5</h1>
+            <h1 class="font-bold text-gray-800">Asistencia V6</h1>
             <button onclick="logout()" class="text-gray-400"><i class="fas fa-power-off"></i></button>
         </header>
 
@@ -73,10 +72,14 @@
                 <div class="max-w-xl mx-auto p-4 space-y-6">
                     
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between">
-                            Datos del Usuario 
-                            <span onclick="resetForm()" class="text-xs text-blue-500 cursor-pointer underline">Limpiar</span>
-                        </h2>
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <h2 class="text-sm font-bold text-gray-700">Datos del Usuario</h2>
+                            <div class="flex items-center gap-3">
+                                <span id="student-count-badge" class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">Total: 0</span>
+                                <span onclick="resetForm()" class="text-xs text-gray-400 cursor-pointer underline hover:text-blue-500">Limpiar</span>
+                            </div>
+                        </div>
+
                         <form id="carnet-form" class="space-y-3">
                             <div class="grid grid-cols-2 gap-3">
                                 <input type="number" id="inp-id" required class="p-2 border rounded bg-gray-50 text-sm" placeholder="ID / Documento">
@@ -92,7 +95,7 @@
                                 <input type="file" id="inp-photo" accept="image/*" class="text-xs text-gray-500">
                             </div>
                             
-                            <button type="button" onclick="updatePreview()" class="w-full bg-gray-100 text-gray-600 py-2 rounded font-bold text-xs mt-2 border">
+                            <button type="button" onclick="updatePreview()" class="w-full bg-gray-100 text-gray-600 py-2 rounded font-bold text-xs mt-2 border hover:bg-gray-200">
                                 <i class="fas fa-sync mr-1"></i> Previsualizar
                             </button>
                         </form>
@@ -138,7 +141,6 @@
                             <button onclick="saveStudentToDB()" class="w-full bg-blue-600 text-white py-3 rounded-xl shadow-lg font-bold text-sm flex items-center justify-center gap-2 transform active:scale-95 transition">
                                 <i class="fas fa-save text-lg"></i> GUARDAR EN GESTOR
                             </button>
-
                             <div class="flex gap-2">
                                 <button onclick="handlePrint()" class="flex-1 bg-gray-800 text-white py-3 rounded-xl shadow font-bold text-xs flex items-center justify-center gap-2">
                                     <i class="fas fa-print"></i> Imprimir
@@ -186,7 +188,20 @@
                         <div id="reader" class="w-full h-64 bg-black rounded-lg overflow-hidden"></div>
                         <div id="scan-result" class="hidden mt-2 p-2 rounded text-center font-bold text-sm"></div>
                     </div>
-                    <ul id="attendance-list" class="bg-white rounded-xl shadow border p-2 h-48 overflow-y-auto"></ul>
+                    
+                    <div class="bg-white rounded-xl shadow border overflow-hidden">
+                        <div class="p-3 bg-gray-50 border-b flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-xs text-gray-700 uppercase">Asistencias</h3>
+                                <span id="attendance-count-badge" class="text-[10px] text-green-600 font-bold">Hoy: 0</span>
+                            </div>
+                            <button onclick="exportToExcel()" class="bg-green-100 hover:bg-green-200 text-green-700 text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1 transition">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </button>
+                        </div>
+                        <ul id="attendance-list" class="h-48 overflow-y-auto divide-y divide-gray-100">
+                            </ul>
+                    </div>
                 </div>
             </div>
 
@@ -218,7 +233,7 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, orderBy, limit, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuración Firebase (Misma que antes)
+        // Configuración (ID MANTENIDO: asistencia-v5 para no perder datos)
         const app = initializeApp({
             apiKey: "AIzaSyBo9YlpqRx04DmnGEZ7sw5M07AGyC7eRG4",
             authDomain: "app-asistecia-qr.firebaseapp.com",
@@ -229,14 +244,17 @@
         });
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const APP_ID = "asistencia-v5"; // Subimos versión
+        
+        // --- ¡IMPORTANTE! MANTENEMOS V5 PARA NO BORRAR DATOS ---
+        const APP_ID = "asistencia-v5"; 
 
         let allStudents = [];
+        let currentAttendanceList = []; // Array para guardar y exportar asistencia
         let html5QrcodeScanner = null;
         let scanCooldown = false;
         let photoBase64 = "";
 
-        // --- AUTH ---
+        // AUTH
         signInAnonymously(auth).then(() => {
             document.getElementById('db-status').innerText = "● Online";
             document.getElementById('db-status').classList.add("text-green-500", "font-bold");
@@ -269,26 +287,19 @@
         document.getElementById('inp-photo').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if(file) {
-                // Compresión básica de imagen antes de mostrar
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        // Redimensionar si es muy grande (max 300px)
                         const MAX_SIZE = 300;
-                        let width = img.width;
-                        let height = img.height;
-                        if (width > height) {
-                            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-                        } else {
-                            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
+                        let width = img.width; let height = img.height;
+                        if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
+                        else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+                        canvas.width = width; canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
-                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7); // 70% calidad
+                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
                         document.getElementById('card-img').src = photoBase64;
                     }
                     img.src = event.target.result;
@@ -301,12 +312,10 @@
             const id = document.getElementById('inp-id').value;
             const name = document.getElementById('inp-name').value;
             if(!id || !name) return showToast("Faltan datos", "error");
-
             document.getElementById('card-name').innerText = name;
             document.getElementById('card-role').innerText = document.getElementById('inp-role').value;
             document.getElementById('card-id').innerText = id;
             document.getElementById('card-residence').innerText = document.getElementById('inp-residence').value || "Sede Principal";
-
             document.getElementById('card-qrcode').innerHTML = "";
             new QRCode(document.getElementById('card-qrcode'), {
                 text: id, width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H
@@ -321,55 +330,35 @@
             document.getElementById('card-qrcode').innerHTML = "";
         }
 
-        // --- GUARDAR EN BD ---
         window.saveStudentToDB = async () => {
             const id = document.getElementById('inp-id').value;
             const name = document.getElementById('inp-name').value;
-            
-            if(!id || !name) return showToast("Faltan datos obligatorios", "error");
-
-            updatePreview(); // Asegurar que la vista está al día
-
+            if(!id || !name) return showToast("Faltan datos", "error");
+            updatePreview();
             try {
-                // Verificar si ya existe para actualizar o crear (usamos setDoc con el ID como clave)
-                // Usamos el ID del estudiante como ID del documento para evitar duplicados reales
                 await setDoc(doc(db, 'artifacts', APP_ID, 'students', id), {
-                    id_card: id,
-                    name: name,
-                    role: document.getElementById('inp-role').value,
-                    residence: document.getElementById('inp-residence').value,
-                    photo: photoBase64, // Guardamos la foto comprimida
-                    createdAt: serverTimestamp()
+                    id_card: id, name: name, role: document.getElementById('inp-role').value,
+                    residence: document.getElementById('inp-residence').value, photo: photoBase64, createdAt: serverTimestamp()
                 });
-                showToast("¡Guardado Exitosamente!", "success");
-            } catch(e) { 
-                console.error(e);
-                showToast("Error al guardar: " + e.message, "error");
-            }
+                showToast("Guardado", "success");
+            } catch(e) { showToast("Error", "error"); }
         };
 
-        // --- DESCARGA / IMPRESIÓN (Ghost Clone) ---
         async function generateCleanCanvas() {
             const original = document.getElementById('preview-card');
             const clone = original.cloneNode(true);
             const container = document.getElementById('export-container');
-            container.innerHTML = "";
-            container.appendChild(clone);
+            container.innerHTML = ""; container.appendChild(clone);
             clone.style.transform = "none"; clone.style.margin = "0";
-            
-            // Regenerar QR en clon
             const qrDiv = clone.querySelector('#card-qrcode');
             qrDiv.innerHTML = "";
-            new QRCode(qrDiv, {
-                text: document.getElementById('card-id').innerText,
-                width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H
-            });
+            new QRCode(qrDiv, { text: document.getElementById('card-id').innerText, width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H });
             await new Promise(r => setTimeout(r, 300));
             return await html2canvas(clone, { scale: 3, useCORS: true, backgroundColor: "#ffffff" });
         }
 
         window.handleDownload = async () => {
-            showToast("Generando imagen...", "info");
+            showToast("Procesando...", "info");
             const canvas = await generateCleanCanvas();
             const link = document.createElement('a');
             link.download = `Carnet_${document.getElementById('card-id').innerText}.png`;
@@ -379,7 +368,7 @@
         };
 
         window.handlePrint = async () => {
-            showToast("Preparando impresión...", "info");
+            showToast("Procesando...", "info");
             const canvas = await generateCleanCanvas();
             const imgData = canvas.toDataURL("image/png");
             const iframe = document.getElementById('print-frame');
@@ -390,17 +379,18 @@
             document.getElementById('export-container').innerHTML = "";
         };
 
-        // --- GESTOR (LOAD DATA) ---
+        // --- GESTIÓN DE DATOS (Con Contadores) ---
         function loadData() {
+            // Cargar Estudiantes y actualizar contador
             onSnapshot(collection(db, 'artifacts', APP_ID, 'students'), (snap) => {
                 allStudents = [];
                 const tbody = document.getElementById('users-table-body');
                 tbody.innerHTML = "";
                 
-                if(snap.empty) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">Sin usuarios guardados</td></tr>';
-                    return;
-                }
+                // ACTUALIZAR CONTADOR CARNETS
+                document.getElementById('student-count-badge').innerText = `Total: ${snap.size}`;
+
+                if(snap.empty) { tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">Sin usuarios</td></tr>'; return; }
 
                 snap.forEach(d => {
                     const s = d.data();
@@ -412,72 +402,87 @@
                                 <div class="text-[10px] text-gray-500">${s.role}</div>
                             </td>
                             <td class="p-2 text-center">
-                                <button onclick="viewUser('${s.id_card}')" class="bg-blue-50 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center shadow-sm hover:bg-blue-100 transition">
-                                    <i class="fas fa-eye text-xs"></i>
-                                </button>
+                                <button onclick="viewUser('${s.id_card}')" class="bg-blue-50 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center shadow-sm"><i class="fas fa-eye text-xs"></i></button>
                             </td>
                             <td class="p-2 text-center">
-                                <button onclick="deleteUser('${d.id}')" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center">
-                                    <i class="fas fa-trash text-xs"></i>
-                                </button>
+                                <button onclick="deleteUser('${d.id}')" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center"><i class="fas fa-trash text-xs"></i></button>
                             </td>
                         </tr>`;
                 });
             });
 
-            // Asistencia...
-            onSnapshot(query(collection(db, 'artifacts', APP_ID, 'attendance'), orderBy('timestamp', 'desc'), limit(20)), (snap) => {
+            // Cargar Asistencia y actualizar contador (Aumentamos límite para Excel)
+            onSnapshot(query(collection(db, 'artifacts', APP_ID, 'attendance'), orderBy('timestamp', 'desc'), limit(100)), (snap) => {
                 const list = document.getElementById('attendance-list');
                 list.innerHTML = "";
+                currentAttendanceList = []; // Resetear lista para exportación
+                
+                // ACTUALIZAR CONTADOR ASISTENCIA
+                document.getElementById('attendance-count-badge').innerText = `Registros: ${snap.size}`;
+
                 snap.forEach(d => {
                     const a = d.data();
-                    list.innerHTML += `<li class="p-3 border-b text-xs flex justify-between items-center">
-                        <span class="font-bold">${a.studentName}</span>
-                        <span class="text-gray-400">${a.timestamp?.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) || ''}</span>
+                    // Guardar para excel
+                    const dateObj = a.timestamp ? a.timestamp.toDate() : new Date();
+                    currentAttendanceList.push({ ...a, dateObj });
+
+                    list.innerHTML += `<li class="p-3 border-b text-xs flex justify-between items-center bg-white hover:bg-gray-50">
+                        <div>
+                            <span class="font-bold block text-gray-800">${a.studentName}</span>
+                            <span class="text-[10px] text-gray-500">${a.studentId}</span>
+                        </div>
+                        <span class="text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">${dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                     </li>`;
                 });
             });
         }
 
-        // Función para VER USUARIO (Cargar datos de vuelta al formulario)
         window.viewUser = (id) => {
             const student = allStudents.find(s => s.id_card == id);
             if(student) {
-                // Rellenar formulario
                 document.getElementById('inp-id').value = student.id_card;
                 document.getElementById('inp-name').value = student.name;
                 document.getElementById('inp-role').value = student.role;
                 document.getElementById('inp-residence').value = student.residence || "";
-                
-                // Cargar foto
-                if(student.photo) {
-                    photoBase64 = student.photo;
-                    document.getElementById('card-img').src = photoBase64;
-                }
-
-                // Generar QR y vista
+                if(student.photo) { photoBase64 = student.photo; document.getElementById('card-img').src = photoBase64; }
                 updatePreview();
-
-                // Cambiar tab
                 switchTab('tab-generar');
-                showToast("Datos cargados", "info");
             }
         };
 
         window.filterUsers = () => {
             const term = document.getElementById('search-input').value.toLowerCase();
-            const rows = document.querySelectorAll('#users-table-body tr');
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(term) ? '' : 'none';
+            document.querySelectorAll('#users-table-body tr').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
             });
         };
 
         window.deleteUser = async (id) => {
-            if(confirm("¿Eliminar usuario permanentemente?")) await deleteDoc(doc(db, 'artifacts', APP_ID, 'students', id));
+            if(confirm("¿Eliminar usuario?")) await deleteDoc(doc(db, 'artifacts', APP_ID, 'students', id));
         };
 
-        // --- SCANNER ---
+        // --- EXPORTAR EXCEL (CSV) ---
+        window.exportToExcel = () => {
+            if (currentAttendanceList.length === 0) return showToast("No hay datos", "error");
+            
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nombre,ID,Fecha,Hora\n"; // Encabezados
+
+            currentAttendanceList.forEach(item => {
+                const fecha = item.dateObj.toLocaleDateString();
+                const hora = item.dateObj.toLocaleTimeString();
+                csvContent += `${item.studentName},${item.studentId},${fecha},${hora}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Asistencia_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         function startScanner() {
             if(html5QrcodeScanner) return;
             html5QrcodeScanner = new Html5Qrcode("reader");
@@ -503,7 +508,6 @@
         }
         function stopScanner() { if(html5QrcodeScanner) { html5QrcodeScanner.stop(); html5QrcodeScanner = null; } }
 
-        // --- UTILS ---
         function showToast(msg, type="info") {
             const t = document.getElementById('toast');
             document.getElementById('toast-message').innerText = msg;
@@ -514,4 +518,5 @@
         }
     </script>
 </body>
-</html>            
+</html>                                    
+                    
