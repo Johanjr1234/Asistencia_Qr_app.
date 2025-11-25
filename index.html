@@ -1,4 +1,4 @@
-                <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -301,5 +301,540 @@
             projectId: "app-asistecia-qr",
             storageBucket: "app-asistecia-qr.firebasestorage.app",
             messagingSenderId: "1001987551868",
-            appId: "1:1001987551868:web                                           
-                                
+            appId: "1:1001987551868:web:f1d409d7cfaf962ea90ff9",
+            measurementId: "G-FNR6BXHPC3"
+        };
+        
+        // Inicialización de Firebase
+        const { initializeApp } = firebase;
+        const { getAuth, signInAnonymously, onAuthStateChanged } = firebase.auth;
+        const { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, where } = firebase.firestore;
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        let globalCarnets = []; // Lista global de carnets para la búsqueda
+
+        // ===================================================================================
+        // === [2] LÓGICA DE LOGIN Y AUTENTICACIÓN ===========================================
+        // ===================================================================================
+        
+        const loginModal = document.getElementById('login-modal');
+        const mainAppContainer = document.getElementById('main-app-container');
+        const loginForm = document.getElementById('login-form');
+        const loginErrorMessage = document.getElementById('login-error-message');
+        
+        const VALID_USER = "admin";
+        const VALID_PASS = "1234";
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username === VALID_USER && password === VALID_PASS) {
+                // Si las credenciales JS son correctas, autenticamos anónimamente en Firebase
+                try {
+                    await signInAnonymously(auth);
+                    // onAuthStateChanged manejará la transición de la UI
+                } catch (error) {
+                    console.error("Error en la autenticación de Firebase:", error);
+                    loginErrorMessage.textContent = "Error de conexión con la nube. Revisa la consola y tu configuración de Firebase.";
+                }
+            } else {
+                loginErrorMessage.textContent = "Usuario o contraseña incorrectos.";
+            }
+        });
+
+        // Manejador del estado de autenticación de Firebase
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Usuario autenticado (anónimamente en este caso)
+                loginModal.classList.add('hidden');
+                mainAppContainer.classList.remove('hidden');
+                console.log("Usuario autenticado en Firebase con UID:", user.uid);
+                showTab('crear'); // Mostrar la pestaña de creación por defecto
+                
+                // Iniciar listeners de Firestore
+                startFirestoreListeners();
+
+            } else {
+                // Usuario no autenticado (o deslogueado)
+                loginModal.classList.remove('hidden');
+                mainAppContainer.classList.add('hidden');
+                console.log("Esperando autenticación...");
+            }
+        });
+        
+        // ===================================================================================
+        // === [3] SINCRONIZACIÓN CON FIRESTORE (NUBE) =======================================
+        // ===================================================================================
+        
+        function startFirestoreListeners() {
+            // 1. Escuchar Carnets (Lista de Carnets Creados)
+            const carnetsCollection = collection(db, "carnets");
+            onSnapshot(carnetsCollection, (snapshot) => {
+                const carnets = [];
+                snapshot.forEach(doc => {
+                    carnets.push({ id: doc.id, ...doc.data() });
+                });
+                renderCarnetList(carnets);
+                globalCarnets = carnets; // Actualizar lista global para búsqueda
+            }, (error) => {
+                console.error("Error al escuchar carnets:", error);
+                alert("Error al cargar carnets: Revisa tus reglas de Firestore.");
+            });
+            
+            // 2. Escuchar Asistencia (Reporte Histórico)
+            const asistenciasCollection = collection(db, "asistencias");
+            const q = query(asistenciasCollection, orderBy("timestamp", "desc"));
+
+            onSnapshot(q, (snapshot) => {
+                const asistencias = [];
+                snapshot.forEach(doc => {
+                    asistencias.push({ id: doc.id, ...doc.data() });
+                });
+                renderAttendanceList(asistencias);
+                renderRealtimeAttendance(asistencias.slice(0, 10)); // Mostrar solo los 10 más recientes
+            }, (error) => {
+                console.error("Error al escuchar asistencias:", error);
+                alert("Error al cargar asistencias: Revisa tus reglas de Firestore.");
+            });
+        }
+        
+        // ===================================================================================
+        // === [4] LÓGICA DE PESTAÑAS Y UI ===================================================
+        // ===================================================================================
+
+        let currentTab = 'crear';
+        function showTab(tabId) {
+            const tabs = ['crear', 'escanear', 'carnets', 'lista'];
+            tabs.forEach(id => {
+                document.getElementById(`${id}-tab`).classList.add('hidden');
+                document.getElementById(`tab-${id}`).classList.remove('bg-indigo-600', 'text-white');
+                document.getElementById(`tab-${id}`).classList.add('text-gray-600', 'hover:bg-gray-100');
+            });
+
+            document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.add('bg-indigo-600', 'text-white');
+            document.getElementById(`tab-${tabId}`).classList.remove('text-gray-600', 'hover:bg-gray-100');
+            currentTab = tabId;
+
+            if (tabId === 'escanear') {
+                startScanner();
+            } else {
+                stopScanner();
+            }
+        }
+        
+        // ===================================================================================
+        // === [5] GESTIÓN DE CARNETS (CRUD) =================================================
+        // ===================================================================================
+
+        const carnetForm = document.getElementById('carnet-form');
+        let carnetDocId = null; // Para saber si estamos editando o creando
+
+        carnetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('nombre').value;
+            const documento = document.getElementById('documento').value;
+            const rol = document.getElementById('rol').value;
+            const residencia = document.getElementById('residencia').value;
+            const vencimiento = document.getElementById('vencimiento').value;
+            const photoBase64 = document.getElementById('profile-photo').src.includes("placehold") ? null : document.getElementById('profile-photo').src;
+            
+            // JSON que se guarda en el QR (Ligero y con datos clave)
+            const qrData = JSON.stringify({
+                id: documento,
+                nombre: nombre,
+                residencia: residencia
+            });
+
+            // Objeto que se guarda en Firestore (Datos completos del carnet)
+            const carnetData = {
+                nombre,
+                documento,
+                rol,
+                residencia,
+                vencimiento,
+                qrData,
+                createdAt: new Date(),
+                // NOTA: No guardamos photoBase64 en Firestore por el límite de tamaño de documentos.
+                // La foto solo se usa en el instante de la generación/descarga.
+            };
+
+            try {
+                if (document.getElementById('carnet-doc-id').value) {
+                    // Modo Edición: Actualizar documento
+                    const id = document.getElementById('carnet-doc-id').value;
+                    const docRef = doc(db, "carnets", id);
+                    await updateDoc(docRef, carnetData);
+                    alert(`Carnet de ${nombre} actualizado exitosamente en la nube.`);
+                } else {
+                    // Modo Creación: Añadir nuevo documento
+                    await addDoc(collection(db, "carnets"), carnetData);
+                    alert(`Carnet de ${nombre} creado y guardado en la nube.`);
+                }
+                
+                // Después de guardar/editar, generar la vista previa
+                generateCard(nombre, rol, documento, residencia, vencimiento, photoBase64);
+                
+                // Limpiar modo edición
+                document.getElementById('carnet-doc-id').value = ''; 
+            } catch (error) {
+                console.error("Error al guardar/editar el carnet:", error);
+                alert("Error al interactuar con Firestore. Revisa tu conexión y reglas.");
+            }
+        });
+        
+        function generateCard(nombre, rol, documento, residencia, vencimiento, photoUrl) {
+            // Actualizar vista previa
+            document.getElementById('card-nombre').textContent = nombre;
+            document.getElementById('card-rol').textContent = rol;
+            document.getElementById('card-documento').textContent = `ID: ${documento}`;
+            document.getElementById('card-residencia').textContent = residencia;
+            document.getElementById('card-vencimiento').textContent = `VENCE: ${formatDateForCard(vencimiento)}`;
+            
+            if (photoUrl) {
+                document.getElementById('profile-photo').src = photoUrl;
+            } else {
+                document.getElementById('profile-photo').src = "https://placehold.co/120x120/A5B4FC/ffffff?text=FOTO";
+            }
+
+            // Generar el QR
+            const qrData = JSON.stringify({ id: documento, nombre: nombre, residencia: residencia });
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), {
+                text: qrData,
+                width: 140,
+                height: 140,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+        
+        function previewPhoto(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Límite aumentado a 4 Megabytes (4 * 1024 * 1024)
+            if(file.size > 4 * 1024 * 1024) { 
+                alert("La imagen es muy pesada. El límite es de 4MB.");
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('profile-photo').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function formatDateForCard(dateString) {
+            const date = new Date(dateString + 'T00:00:00'); // Añadir T00:00:00 para evitar problemas de zona horaria
+            return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+        
+        function renderCarnetList(carnets) {
+            const tbody = document.getElementById('carnet-list-body');
+            tbody.innerHTML = '';
+            if (carnets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">No hay carnets creados.</td></tr>';
+                return;
+            }
+
+            carnets.forEach(carnet => {
+                const row = `
+                    <tr data-search-terms="${carnet.nombre.toLowerCase()} ${carnet.documento} ${carnet.residencia.toLowerCase()}">
+                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${carnet.nombre}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">${carnet.documento}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">${carnet.residencia}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-red-600 font-semibold">${formatDateForCard(carnet.vencimiento)}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editCarnet('${carnet.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
+                            <button onclick="deleteCarnet('${carnet.id}', '${carnet.nombre}')" class="text-red-600 hover:text-red-900">Borrar</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+        
+        // Función de Búsqueda de Carnets (Nueva en v5.0)
+        function filterCarnetList() {
+            const input = document.getElementById('carnet-search-input');
+            const filter = input.value.toLowerCase();
+            const rows = document.querySelectorAll('#carnet-list-body tr');
+
+            rows.forEach(row => {
+                const searchTerms = row.getAttribute('data-search-terms');
+                if (searchTerms && searchTerms.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        function editCarnet(id) {
+            const carnet = globalCarnets.find(c => c.id === id);
+            if (!carnet) return;
+
+            document.getElementById('carnet-doc-id').value = carnet.id;
+            document.getElementById('nombre').value = carnet.nombre;
+            document.getElementById('documento').value = carnet.documento;
+            document.getElementById('rol').value = carnet.rol;
+            document.getElementById('residencia').value = carnet.residencia;
+            document.getElementById('vencimiento').value = carnet.vencimiento;
+
+            // Cambiar a la pestaña de creación
+            showTab('crear');
+            
+            // Generar vista previa con datos de edición (la foto debe subirse de nuevo si se quiere)
+            generateCard(carnet.nombre, carnet.rol, carnet.documento, carnet.residencia, carnet.vencimiento, null); 
+            
+            alert(`Cargando datos de ${carnet.nombre} para editar.`);
+        }
+
+        async function deleteCarnet(id, nombre) {
+            if (!confirm(`¿Está seguro de que desea eliminar el carnet de ${nombre}? Esta acción es permanente.`)) return;
+
+            try {
+                await deleteDoc(doc(db, "carnets", id));
+                alert(`Carnet de ${nombre} eliminado de la nube.`);
+            } catch (error) {
+                console.error("Error al borrar el carnet:", error);
+                alert("Error al borrar el carnet. Revisa tus reglas de Firestore.");
+            }
+        }
+        
+        // ===================================================================================
+        // === [6] LÓGICA DE IMPRESIÓN Y DESCARGA (html2canvas) ==============================
+        // ===================================================================================
+
+        function printCard() {
+            window.print();
+        }
+
+        function downloadCard() {
+            const cardElement = document.getElementById('card-to-print');
+            
+            // html2canvas captura el elemento y lo convierte en una imagen
+            html2canvas(cardElement, {
+                scale: 2, // Aumentar escala para mejor calidad
+                useCORS: true // Necesario para imágenes de placeholder
+            }).then(canvas => {
+                // Convertir el canvas a JPG y forzar la descarga
+                const imgData = canvas.toDataURL('image/jpeg');
+                const link = document.createElement('a');
+                const nombre = document.getElementById('card-nombre').textContent.replace(/\s+/g, '_');
+                link.download = `Carnet_${nombre}.jpg`;
+                link.href = imgData;
+                link.click();
+            });
+        }
+        
+        // ===================================================================================
+        // === [7] LÓGICA DEL ESCÁNER Y ASISTENCIA ===========================================
+        // ===================================================================================
+
+        const qrVideo = document.getElementById('qr-video');
+        const scanFeedback = document.getElementById('scan-feedback');
+        let scanner = null;
+        let lastScanTime = 0;
+        const cooldownTime = 30000; // 30 segundos de cooldown (30,000 milisegundos)
+
+        async function startScanner() {
+            if (scanner) return; // Ya está corriendo
+
+            // Usar la librería jsQR (o cualquier otra compatible con video/canvas)
+            // NOTA: Usaremos la API de MediaDevices (nativo del navegador) para el video
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                qrVideo.srcObject = stream;
+                qrVideo.play();
+                scanner = setInterval(scanFrame, 100); // Intenta escanear cada 100ms
+                console.log("Escáner iniciado.");
+            } catch (err) {
+                console.error("Error al acceder a la cámara:", err);
+                scanFeedback.textContent = "Error: No se pudo acceder a la cámara. Asegúrate de dar permisos.";
+                scanFeedback.className = 'mt-4 p-3 rounded-lg text-center font-bold bg-red-100 text-red-700 block';
+            }
+        }
+
+        function stopScanner() {
+            if (scanner) {
+                clearInterval(scanner);
+                scanner = null;
+                if (qrVideo.srcObject) {
+                    qrVideo.srcObject.getTracks().forEach(track => track.stop());
+                }
+                console.log("Escáner detenido.");
+            }
+        }
+
+        function scanFrame() {
+            if (qrVideo.readyState === qrVideo.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement('canvas');
+                canvas.width = qrVideo.videoWidth;
+                canvas.height = qrVideo.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
+                
+                // Simulación de escaneo (En un proyecto real usarías una librería como jsQR)
+                // Aquí solo simulamos que el QR es leído exitosamente
+                const now = Date.now();
+                if (Math.random() < 0.05) { // 5% de probabilidad de simular un escaneo exitoso
+                    simulateScanSuccess();
+                }
+            }
+        }
+        
+        // Función de simulación de escaneo para propósitos de demostración
+        async function simulateScanSuccess() {
+            // Nota: En un entorno real, la librería de escaneo devuelve el 'rawText' del QR
+            const dummyCarnet = globalCarnets[Math.floor(Math.random() * globalCarnets.length)];
+            if (!dummyCarnet) {
+                showFeedback("Cree un carnet primero para simular el escaneo.", 'bg-yellow-100 text-yellow-700');
+                return;
+            }
+            
+            const qrText = JSON.stringify({
+                id: dummyCarnet.documento,
+                nombre: dummyCarnet.nombre,
+                residencia: dummyCarnet.residencia
+            });
+
+            try {
+                const qrData = JSON.parse(qrText);
+                const currentTime = Date.now();
+
+                // 1. Verificar Cooldown (Anti-Doble Marcado)
+                if (currentTime - lastScanTime < cooldownTime) {
+                    showFeedback(`¡Ya Marcó! Espere ${cooldownTime / 1000}s. (${qrData.nombre})`, 'bg-yellow-100 text-yellow-700');
+                    return;
+                }
+
+                // 2. Guardar Asistencia
+                const asistenciaRef = collection(db, "asistencias");
+                await addDoc(asistenciaRef, {
+                    id: qrData.id,
+                    nombre: qrData.nombre,
+                    residencia: qrData.residencia,
+                    timestamp: new Date().toISOString(),
+                });
+                
+                // 3. Feedback y Cooldown
+                lastScanTime = currentTime;
+                showFeedback(`Registro EXITOSO: ${qrData.nombre}`, 'bg-green-100 text-green-700');
+                
+            } catch (e) {
+                showFeedback("QR Inválido o Dañado.", 'bg-red-100 text-red-700');
+            }
+        }
+        
+        function showFeedback(message, className) {
+            scanFeedback.textContent = message;
+            scanFeedback.className = `mt-4 p-3 rounded-lg text-center font-bold ${className} block`;
+            
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                scanFeedback.classList.add('hidden');
+            }, 5000);
+        }
+
+        // ===================================================================================
+        // === [8] REPORTE DE ASISTENCIA Y RENDERING =========================================
+        // ===================================================================================
+
+        function renderAttendanceList(asistencias) {
+            const tbody = document.getElementById('attendance-list-body');
+            tbody.innerHTML = '';
+
+            if (asistencias.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">No hay registros de asistencia.</td></tr>';
+                return;
+            }
+
+            asistencias.forEach(asistencia => {
+                const date = new Date(asistencia.timestamp);
+                const formattedDate = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const formattedTime = date.toLocaleTimeString('es-ES');
+
+                const row = `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${asistencia.nombre}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${asistencia.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${asistencia.residencia}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formattedDate} ${formattedTime}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+        
+        function renderRealtimeAttendance(asistencias) {
+            const ul = document.getElementById('realtime-attendance-list');
+            ul.innerHTML = '';
+
+            if (asistencias.length === 0) {
+                ul.innerHTML = '<li class="p-3 bg-gray-50 rounded-lg text-gray-500 text-center">Esperando el primer escaneo...</li>';
+                return;
+            }
+
+            asistencias.forEach(asistencia => {
+                const date = new Date(asistencia.timestamp);
+                const formattedTime = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                const listItem = `
+                    <li class="p-3 bg-gray-50 rounded-lg border-l-4 border-green-500 shadow-sm">
+                        <span class="font-semibold text-gray-800">${asistencia.nombre}</span>
+                        <span class="text-xs text-gray-500 ml-2">(${asistencia.id})</span>
+                        <span class="block text-sm text-gray-600">${formattedTime}</span>
+                    </li>
+                `;
+                ul.insertAdjacentHTML('beforeend', listItem);
+            });
+        }
+        
+        function exportToCSV() {
+            const table = document.getElementById('attendance-list-body');
+            let csv = 'Nombre,ID,Residencia,Fecha y Hora\n';
+
+            // Iterar sobre las filas de la tabla
+            for (const row of table.rows) {
+                let rowData = [];
+                for (const cell of row.cells) {
+                    rowData.push(cell.textContent.trim());
+                }
+                csv += rowData.join(',') + '\n';
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", "reporte_asistencia.csv");
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+        
+        // Inicializar la vista previa del carnet al cargar
+        document.addEventListener('DOMContentLoaded', () => {
+            // Se inicializa el carnet con datos de ejemplo
+            generateCard("NOMBRE COMPLETO", "CARGO", "00000000", "Ciudad / País", "2025-12-31", null); 
+        });
+
+    </script>
+</body>
+</html>               
+                                        
+                    
