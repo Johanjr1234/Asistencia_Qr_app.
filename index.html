@@ -1,9 +1,9 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asistencia QR Pro V6</title>
+    <title>Asistencia V1 Final</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -17,24 +17,20 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; height: 100vh; overflow: hidden; }
-        
         .tab-content { display: none; height: 100%; overflow-y: auto; padding-bottom: 120px; }
         .tab-content.active { display: block; }
 
-        /* ESTILOS DEL CARNET (Clase Maestra) */
+        /* ESTILOS DEL CARNET (Diseño Maestro) */
         .master-card {
             width: 320px; height: 540px; background: white; position: relative;
             border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             display: flex; flex-direction: column; align-items: center; margin: 0 auto;
         }
-
         .card-header {
             background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
             height: 160px; width: 100%; position: absolute; top: 0; left: 0;
             border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; z-index: 0;
         }
-
-        /* Contenedor fantasma para exportación */
         #export-container { position: fixed; top: -9999px; left: -9999px; z-index: -1; }
         .text-fix { white-space: nowrap; overflow: visible; }
         #print-frame { display: none; }
@@ -48,7 +44,7 @@
                 <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-qrcode text-3xl text-white"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800">Acceso Seguro</h1>
+                <h1 class="text-2xl font-bold text-gray-800">Acceso V1</h1>
             </div>
             <form id="login-form" class="space-y-4">
                 <input type="text" id="username" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none" placeholder="Usuario">
@@ -56,13 +52,13 @@
                 <div id="login-error" class="hidden text-red-500 text-xs text-center">Credenciales incorrectas</div>
                 <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Ingresar</button>
             </form>
-            <p id="db-status" class="mt-4 text-center text-xs text-gray-400">Conectando...</p>
+            <p id="db-status" class="mt-4 text-center text-xs text-gray-400">Iniciando...</p>
         </div>
     </div>
 
     <div id="app-view" class="hidden flex-col h-full w-full">
         <header class="bg-white border-b px-4 py-3 flex justify-between items-center z-20 shadow-sm shrink-0">
-            <h1 class="font-bold text-gray-800">Asistencia V6</h1>
+            <h1 class="font-bold text-gray-800">Asistencia V1 Final</h1>
             <button onclick="logout()" class="text-gray-400"><i class="fas fa-power-off"></i></button>
         </header>
 
@@ -70,19 +66,14 @@
             
             <div id="tab-generar" class="tab-content active">
                 <div class="max-w-xl mx-auto p-4 space-y-6">
-                    
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                         <div class="flex justify-between items-center mb-4 border-b pb-2">
-                            <h2 class="text-sm font-bold text-gray-700">Datos del Usuario</h2>
-                            <div class="flex items-center gap-3">
-                                <span id="student-count-badge" class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">Total: 0</span>
-                                <span onclick="resetForm()" class="text-xs text-gray-400 cursor-pointer underline hover:text-blue-500">Limpiar</span>
-                            </div>
+                            <h2 class="text-sm font-bold text-gray-700">Nuevo Usuario</h2>
+                            <span id="badge-users" class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-full">Total: 0</span>
                         </div>
-
                         <form id="carnet-form" class="space-y-3">
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="inp-id" required class="p-2 border rounded bg-gray-50 text-sm" placeholder="ID / Documento">
+                                <input type="number" id="inp-id" required class="p-2 border rounded bg-gray-50 text-sm" placeholder="ID Documento">
                                 <select id="inp-role" class="p-2 border rounded bg-gray-50 text-sm">
                                     <option value="ESTUDIANTE">ESTUDIANTE</option>
                                     <option value="PROFESOR">PROFESOR</option>
@@ -91,12 +82,11 @@
                             </div>
                             <input type="text" id="inp-name" required class="w-full p-2 border rounded bg-gray-50 text-sm" placeholder="Nombre Completo">
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="text" id="inp-residence" class="p-2 border rounded bg-gray-50 text-sm" placeholder="Sede / Ciudad">
+                                <input type="text" id="inp-residence" class="p-2 border rounded bg-gray-50 text-sm" placeholder="Sede">
                                 <input type="file" id="inp-photo" accept="image/*" class="text-xs text-gray-500">
                             </div>
-                            
-                            <button type="button" onclick="updatePreview()" class="w-full bg-gray-100 text-gray-600 py-2 rounded font-bold text-xs mt-2 border hover:bg-gray-200">
-                                <i class="fas fa-sync mr-1"></i> Previsualizar
+                            <button type="button" onclick="updatePreview()" class="w-full bg-gray-100 text-gray-600 py-2 rounded font-bold text-xs mt-2 border">
+                                <i class="fas fa-eye mr-1"></i> Previsualizar
                             </button>
                         </form>
                     </div>
@@ -107,47 +97,29 @@
                                 <div class="card-header"></div>
                                 <div class="relative z-10 flex flex-col items-center w-full h-full pt-8">
                                     <h3 class="text-white text-xs font-bold tracking-[0.2em] uppercase opacity-90 mb-6">IDENTIFICACIÓN DIGITAL</h3>
-                                    
                                     <div class="w-36 h-36 rounded-full p-1 bg-white shadow-lg z-20 mb-4">
                                         <img id="card-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' class='h-full w-full text-gray-300' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z' /%3E%3C/svg%3E" class="w-full h-full rounded-full object-cover bg-gray-100">
                                     </div>
-
                                     <div class="text-center w-full px-4 mb-2">
                                         <h2 id="card-name" class="text-xl font-bold text-gray-900 leading-tight text-fix pb-1">Nombre Usuario</h2>
-                                        <div class="mt-2">
-                                            <span id="card-role" class="bg-blue-100 text-blue-800 text-xs px-4 py-1.5 rounded-full uppercase font-bold tracking-wide">ROL</span>
-                                        </div>
+                                        <div class="mt-2"><span id="card-role" class="bg-blue-100 text-blue-800 text-xs px-4 py-1.5 rounded-full uppercase font-bold tracking-wide">ROL</span></div>
                                     </div>
-
                                     <div class="flex justify-between w-full px-10 text-center mt-4 mb-4">
-                                        <div>
-                                            <p class="text-[10px] text-gray-400 uppercase font-bold">ID Número</p>
-                                            <p id="card-id" class="font-mono text-gray-800 font-bold text-lg">-</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-[10px] text-gray-400 uppercase font-bold">Sede</p>
-                                            <p id="card-residence" class="text-gray-800 font-bold text-lg">-</p>
-                                        </div>
+                                        <div><p class="text-[10px] text-gray-400 uppercase font-bold">ID Número</p><p id="card-id" class="font-mono text-gray-800 font-bold text-lg">-</p></div>
+                                        <div><p class="text-[10px] text-gray-400 uppercase font-bold">Sede</p><p id="card-residence" class="text-gray-800 font-bold text-lg">-</p></div>
                                     </div>
-
-                                    <div class="mt-auto mb-8 bg-white p-2 rounded-xl border shadow-sm">
-                                        <div id="card-qrcode"></div>
-                                    </div>
+                                    <div class="mt-auto mb-8 bg-white p-2 rounded-xl border shadow-sm"><div id="card-qrcode"></div></div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="w-full max-w-sm space-y-3 mt-4">
-                            <button onclick="saveStudentToDB()" class="w-full bg-blue-600 text-white py-3 rounded-xl shadow-lg font-bold text-sm flex items-center justify-center gap-2 transform active:scale-95 transition">
-                                <i class="fas fa-save text-lg"></i> GUARDAR EN GESTOR
+                            <button onclick="saveStudentToDB()" class="w-full bg-blue-600 text-white py-3 rounded-xl shadow-lg font-bold text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-save"></i> GUARDAR EN GESTOR
                             </button>
                             <div class="flex gap-2">
-                                <button onclick="handlePrint()" class="flex-1 bg-gray-800 text-white py-3 rounded-xl shadow font-bold text-xs flex items-center justify-center gap-2">
-                                    <i class="fas fa-print"></i> Imprimir
-                                </button>
-                                <button onclick="handleDownload()" class="flex-1 bg-green-600 text-white py-3 rounded-xl shadow font-bold text-xs flex items-center justify-center gap-2">
-                                    <i class="fas fa-download"></i> Descargar PNG
-                                </button>
+                                <button onclick="handlePrint()" class="flex-1 bg-gray-800 text-white py-3 rounded-xl shadow font-bold text-xs flex items-center justify-center gap-2"><i class="fas fa-print"></i> Imprimir</button>
+                                <button onclick="handleDownload()" class="flex-1 bg-green-600 text-white py-3 rounded-xl shadow font-bold text-xs flex items-center justify-center gap-2"><i class="fas fa-download"></i> PNG</button>
                             </div>
                         </div>
                     </div>
@@ -158,24 +130,12 @@
                 <div class="max-w-xl mx-auto p-4">
                     <div class="bg-white rounded-xl shadow-sm border p-4">
                         <div class="flex justify-between items-center mb-4">
-                            <h2 class="font-bold text-gray-700">Lista de Usuarios</h2>
-                            <div class="relative">
-                                <i class="fas fa-search absolute left-2 top-2 text-gray-400 text-xs"></i>
-                                <input type="text" id="search-input" onkeyup="filterUsers()" placeholder="Buscar..." class="pl-6 border rounded px-2 py-1 text-xs w-32 bg-gray-50">
-                            </div>
+                            <h2 class="font-bold text-gray-700">Base de Datos</h2>
+                            <input type="text" id="search-input" onkeyup="filterUsers()" placeholder="Buscar..." class="pl-2 border rounded py-1 text-xs w-32 bg-gray-50">
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm">
-                                <thead class="bg-gray-100 text-xs uppercase text-gray-500">
-                                    <tr>
-                                        <th class="p-2">Usuario</th>
-                                        <th class="p-2 text-center">Ver</th>
-                                        <th class="p-2 text-center">Borrar</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="users-table-body">
-                                    <tr><td colspan="3" class="p-4 text-center text-gray-400">Cargando...</td></tr>
-                                </tbody>
+                                <tbody id="users-table-body"><tr><td class="p-4 text-center text-gray-400">Cargando...</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -192,48 +152,35 @@
                     <div class="bg-white rounded-xl shadow border overflow-hidden">
                         <div class="p-3 bg-gray-50 border-b flex justify-between items-center">
                             <div>
-                                <h3 class="font-bold text-xs text-gray-700 uppercase">Asistencias</h3>
-                                <span id="attendance-count-badge" class="text-[10px] text-green-600 font-bold">Hoy: 0</span>
+                                <h3 class="font-bold text-xs text-gray-700 uppercase">Hoy</h3>
+                                <span id="badge-attendance" class="text-[10px] text-green-600 font-bold">Registros: 0</span>
                             </div>
-                            <button onclick="exportToExcel()" class="bg-green-100 hover:bg-green-200 text-green-700 text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1 transition">
+                            <button onclick="exportToExcel()" class="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1">
                                 <i class="fas fa-file-excel"></i> Excel
                             </button>
                         </div>
-                        <ul id="attendance-list" class="h-48 overflow-y-auto divide-y divide-gray-100">
-                            </ul>
+                        <ul id="attendance-list" class="h-48 overflow-y-auto divide-y divide-gray-100"></ul>
                     </div>
                 </div>
             </div>
-
         </main>
 
         <nav class="bg-white border-t flex justify-around p-2 fixed bottom-0 left-0 w-full z-40 shadow-lg h-[80px] pb-safe">
-            <button onclick="switchTab('tab-generar')" class="nav-btn w-full text-blue-600 flex flex-col items-center justify-center h-full" data-target="tab-generar">
-                <i class="fas fa-id-card text-xl mb-1"></i><span class="text-[10px] font-bold">Carnet</span>
-            </button>
-            <button onclick="switchTab('tab-gestionar')" class="nav-btn w-full text-gray-400 flex flex-col items-center justify-center h-full" data-target="tab-gestionar">
-                <i class="fas fa-users-cog text-xl mb-1"></i><span class="text-[10px] font-bold">Gestor</span>
-            </button>
-            <button onclick="switchTab('tab-asistencia')" class="nav-btn w-full text-gray-400 flex flex-col items-center justify-center h-full" data-target="tab-asistencia">
-                <i class="fas fa-qrcode text-xl mb-1"></i><span class="text-[10px] font-bold">Scan</span>
-            </button>
+            <button onclick="switchTab('tab-generar')" class="nav-btn w-full text-blue-600 flex flex-col items-center justify-center h-full" data-target="tab-generar"><i class="fas fa-id-card text-xl mb-1"></i><span class="text-[10px] font-bold">Carnet</span></button>
+            <button onclick="switchTab('tab-gestionar')" class="nav-btn w-full text-gray-400 flex flex-col items-center justify-center h-full" data-target="tab-gestionar"><i class="fas fa-users-cog text-xl mb-1"></i><span class="text-[10px] font-bold">Gestor</span></button>
+            <button onclick="switchTab('tab-asistencia')" class="nav-btn w-full text-gray-400 flex flex-col items-center justify-center h-full" data-target="tab-asistencia"><i class="fas fa-qrcode text-xl mb-1"></i><span class="text-[10px] font-bold">Scan</span></button>
         </nav>
     </div>
 
     <div id="export-container"></div>
     <iframe id="print-frame"></iframe>
-
-    <div id="toast" class="hidden fixed top-5 right-5 z-[100] bg-gray-800 text-white px-4 py-3 rounded-lg shadow-2xl flex items-center gap-3">
-        <i id="toast-icon" class="fas fa-check-circle text-green-400"></i>
-        <span id="toast-message" class="text-xs font-bold">Mensaje</span>
-    </div>
+    <div id="toast" class="hidden fixed top-5 right-5 z-[100] bg-gray-800 text-white px-4 py-3 rounded-lg shadow-2xl flex items-center gap-3"><span id="toast-message" class="text-xs font-bold">Msg</span></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, orderBy, limit, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, deleteDoc, doc, orderBy, limit, serverTimestamp, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuración (ID MANTENIDO: asistencia-v5 para no perder datos)
         const app = initializeApp({
             apiKey: "AIzaSyBo9YlpqRx04DmnGEZ7sw5M07AGyC7eRG4",
             authDomain: "app-asistecia-qr.firebaseapp.com",
@@ -245,31 +192,29 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // --- ¡IMPORTANTE! MANTENEMOS V5 PARA NO BORRAR DATOS ---
-        const APP_ID = "asistencia-v5"; 
+        // --- AQUÍ ESTÁ EL REINICIO A V1 ---
+        const APP_ID = "app-v1-final"; 
 
         let allStudents = [];
-        let currentAttendanceList = []; // Array para guardar y exportar asistencia
-        let html5QrcodeScanner = null;
-        let scanCooldown = false;
+        let attendanceData = [];
+        let scanner = null;
+        let cooldown = false;
         let photoBase64 = "";
 
-        // AUTH
         signInAnonymously(auth).then(() => {
             document.getElementById('db-status').innerText = "● Online";
-            document.getElementById('db-status').classList.add("text-green-500", "font-bold");
+            document.getElementById('db-status').className = "mt-4 text-center text-xs text-green-500 font-bold";
             loadData();
         });
 
+        // LOGIN
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            if(document.getElementById('username').value === 'admin' && document.getElementById('password').value === '1234') {
+            if(document.getElementById('username').value==='admin' && document.getElementById('password').value==='1234') {
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('app-view').classList.remove('hidden');
                 document.getElementById('app-view').classList.add('flex');
-            } else {
-                document.getElementById('login-error').classList.remove('hidden');
-            }
+            } else document.getElementById('login-error').classList.remove('hidden');
         });
 
         window.logout = () => location.reload();
@@ -283,26 +228,25 @@
             if(id === 'tab-asistencia') startScanner(); else stopScanner();
         };
 
-        // --- GESTIÓN DE CARNET ---
+        // CARNET & FOTOS
         document.getElementById('inp-photo').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if(file) {
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = (ev) => {
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        const MAX_SIZE = 300;
-                        let width = img.width; let height = img.height;
-                        if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
-                        else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
-                        canvas.width = width; canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
+                        const MAX = 300;
+                        let w = img.width, h = img.height;
+                        if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } } else { if (h > MAX) { w *= MAX/h; h = MAX; } }
+                        canvas.width = w; canvas.height = h;
+                        ctx.drawImage(img, 0, 0, w, h);
                         photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
                         document.getElementById('card-img').src = photoBase64;
                     }
-                    img.src = event.target.result;
+                    img.src = ev.target.result;
                 }
                 reader.readAsDataURL(file);
             }
@@ -311,214 +255,146 @@
         window.updatePreview = () => {
             const id = document.getElementById('inp-id').value;
             const name = document.getElementById('inp-name').value;
-            if(!id || !name) return showToast("Faltan datos", "error");
+            if(!id || !name) return showToast("Faltan datos");
             document.getElementById('card-name').innerText = name;
             document.getElementById('card-role').innerText = document.getElementById('inp-role').value;
             document.getElementById('card-id').innerText = id;
-            document.getElementById('card-residence').innerText = document.getElementById('inp-residence').value || "Sede Principal";
+            document.getElementById('card-residence').innerText = document.getElementById('inp-residence').value || "Sede";
             document.getElementById('card-qrcode').innerHTML = "";
-            new QRCode(document.getElementById('card-qrcode'), {
-                text: id, width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H
-            });
+            new QRCode(document.getElementById('card-qrcode'), { text: id, width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H });
         };
-
-        window.resetForm = () => {
-            document.getElementById('carnet-form').reset();
-            photoBase64 = "";
-            document.getElementById('card-img').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' class='h-full w-full text-gray-300' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z' /%3E%3C/svg%3E";
-            document.getElementById('card-name').innerText = "Nombre Usuario";
-            document.getElementById('card-qrcode').innerHTML = "";
-        }
 
         window.saveStudentToDB = async () => {
             const id = document.getElementById('inp-id').value;
             const name = document.getElementById('inp-name').value;
-            if(!id || !name) return showToast("Faltan datos", "error");
+            if(!id || !name) return showToast("Faltan datos");
             updatePreview();
             try {
                 await setDoc(doc(db, 'artifacts', APP_ID, 'students', id), {
                     id_card: id, name: name, role: document.getElementById('inp-role').value,
                     residence: document.getElementById('inp-residence').value, photo: photoBase64, createdAt: serverTimestamp()
                 });
-                showToast("Guardado", "success");
-            } catch(e) { showToast("Error", "error"); }
+                showToast("Guardado OK");
+            } catch(e) { showToast("Error al guardar"); }
         };
 
-        async function generateCleanCanvas() {
-            const original = document.getElementById('preview-card');
-            const clone = original.cloneNode(true);
-            const container = document.getElementById('export-container');
-            container.innerHTML = ""; container.appendChild(clone);
+        // DESCARGA / PRINT
+        async function getCanvas() {
+            const clone = document.getElementById('preview-card').cloneNode(true);
+            document.getElementById('export-container').appendChild(clone);
             clone.style.transform = "none"; clone.style.margin = "0";
-            const qrDiv = clone.querySelector('#card-qrcode');
-            qrDiv.innerHTML = "";
-            new QRCode(qrDiv, { text: document.getElementById('card-id').innerText, width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H });
+            const qr = clone.querySelector('#card-qrcode'); qr.innerHTML = "";
+            new QRCode(qr, { text: document.getElementById('card-id').innerText, width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H });
             await new Promise(r => setTimeout(r, 300));
-            return await html2canvas(clone, { scale: 3, useCORS: true, backgroundColor: "#ffffff" });
+            const c = await html2canvas(clone, { scale: 3, backgroundColor: "#fff" });
+            document.getElementById('export-container').innerHTML = "";
+            return c;
         }
-
         window.handleDownload = async () => {
-            showToast("Procesando...", "info");
-            const canvas = await generateCleanCanvas();
-            const link = document.createElement('a');
-            link.download = `Carnet_${document.getElementById('card-id').innerText}.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-            document.getElementById('export-container').innerHTML = "";
+            showToast("Procesando...");
+            const c = await getCanvas();
+            const l = document.createElement('a');
+            l.download = `Carnet_${document.getElementById('card-id').innerText}.png`;
+            l.href = c.toDataURL(); l.click();
         };
-
         window.handlePrint = async () => {
-            showToast("Procesando...", "info");
-            const canvas = await generateCleanCanvas();
-            const imgData = canvas.toDataURL("image/png");
-            const iframe = document.getElementById('print-frame');
-            const doc = iframe.contentWindow.document;
-            doc.open();
-            doc.write(`<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;"><img src="${imgData}" style="max-height:90vh;border:1px dashed #ccc;"><script>window.onload=function(){setTimeout(()=>{window.print();},500);}<\/script></body></html>`);
-            doc.close();
-            document.getElementById('export-container').innerHTML = "";
+            showToast("Procesando...");
+            const c = await getCanvas();
+            const win = document.getElementById('print-frame').contentWindow;
+            win.document.open();
+            win.document.write(`<img src="${c.toDataURL()}" style="max-height:90vh;border:1px dashed #ccc"><script>onload=function(){setTimeout(print,500)}<\/script>`);
+            win.document.close();
         };
 
-        // --- GESTIÓN DE DATOS (Con Contadores) ---
+        // DATOS & CONTADORES
         function loadData() {
-            // Cargar Estudiantes y actualizar contador
+            // Estudiantes
             onSnapshot(collection(db, 'artifacts', APP_ID, 'students'), (snap) => {
                 allStudents = [];
-                const tbody = document.getElementById('users-table-body');
-                tbody.innerHTML = "";
+                const tb = document.getElementById('users-table-body');
+                tb.innerHTML = "";
+                document.getElementById('badge-users').innerText = `Total: ${snap.size}`; // CONTADOR
                 
-                // ACTUALIZAR CONTADOR CARNETS
-                document.getElementById('student-count-badge').innerText = `Total: ${snap.size}`;
-
-                if(snap.empty) { tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">Sin usuarios</td></tr>'; return; }
-
+                if(snap.empty) tb.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">Sin datos</td></tr>';
                 snap.forEach(d => {
                     const s = d.data();
                     allStudents.push(s);
-                    tbody.innerHTML += `
-                        <tr class="border-b hover:bg-gray-50 transition">
-                            <td class="p-2">
-                                <div class="font-bold text-gray-800">${s.name}</div>
-                                <div class="text-[10px] text-gray-500">${s.role}</div>
-                            </td>
-                            <td class="p-2 text-center">
-                                <button onclick="viewUser('${s.id_card}')" class="bg-blue-50 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center shadow-sm"><i class="fas fa-eye text-xs"></i></button>
-                            </td>
-                            <td class="p-2 text-center">
-                                <button onclick="deleteUser('${d.id}')" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center"><i class="fas fa-trash text-xs"></i></button>
-                            </td>
-                        </tr>`;
+                    tb.innerHTML += `<tr class="border-b"><td class="p-2"><div class="font-bold">${s.name}</div><div class="text-xs text-gray-500">${s.id_card}</div></td><td class="p-2 text-center"><button onclick="viewUser('${s.id_card}')" class="text-blue-500"><i class="fas fa-eye"></i></button></td><td class="p-2 text-center"><button onclick="deleteUser('${d.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`;
                 });
             });
 
-            // Cargar Asistencia y actualizar contador (Aumentamos límite para Excel)
+            // Asistencia
             onSnapshot(query(collection(db, 'artifacts', APP_ID, 'attendance'), orderBy('timestamp', 'desc'), limit(100)), (snap) => {
                 const list = document.getElementById('attendance-list');
                 list.innerHTML = "";
-                currentAttendanceList = []; // Resetear lista para exportación
+                attendanceData = [];
+                document.getElementById('badge-attendance').innerText = `Registros: ${snap.size}`; // CONTADOR
                 
-                // ACTUALIZAR CONTADOR ASISTENCIA
-                document.getElementById('attendance-count-badge').innerText = `Registros: ${snap.size}`;
-
                 snap.forEach(d => {
                     const a = d.data();
-                    // Guardar para excel
-                    const dateObj = a.timestamp ? a.timestamp.toDate() : new Date();
-                    currentAttendanceList.push({ ...a, dateObj });
-
-                    list.innerHTML += `<li class="p-3 border-b text-xs flex justify-between items-center bg-white hover:bg-gray-50">
-                        <div>
-                            <span class="font-bold block text-gray-800">${a.studentName}</span>
-                            <span class="text-[10px] text-gray-500">${a.studentId}</span>
-                        </div>
-                        <span class="text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">${dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                    </li>`;
+                    attendanceData.push(a);
+                    const time = a.timestamp ? a.timestamp.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--';
+                    list.innerHTML += `<li class="p-3 border-b text-xs flex justify-between"><span>${a.studentName}</span><span class="font-mono bg-gray-100 px-1 rounded">${time}</span></li>`;
                 });
             });
         }
 
         window.viewUser = (id) => {
-            const student = allStudents.find(s => s.id_card == id);
-            if(student) {
-                document.getElementById('inp-id').value = student.id_card;
-                document.getElementById('inp-name').value = student.name;
-                document.getElementById('inp-role').value = student.role;
-                document.getElementById('inp-residence').value = student.residence || "";
-                if(student.photo) { photoBase64 = student.photo; document.getElementById('card-img').src = photoBase64; }
-                updatePreview();
-                switchTab('tab-generar');
+            const s = allStudents.find(x => x.id_card == id);
+            if(s) {
+                document.getElementById('inp-id').value = s.id_card;
+                document.getElementById('inp-name').value = s.name;
+                document.getElementById('inp-role').value = s.role;
+                if(s.photo) { photoBase64 = s.photo; document.getElementById('card-img').src = s.photo; }
+                updatePreview(); switchTab('tab-generar');
             }
         };
-
+        window.deleteUser = async (id) => { if(confirm("¿Borrar?")) await deleteDoc(doc(db, 'artifacts', APP_ID, 'students', id)); };
         window.filterUsers = () => {
-            const term = document.getElementById('search-input').value.toLowerCase();
-            document.querySelectorAll('#users-table-body tr').forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-            });
+            const v = document.getElementById('search-input').value.toLowerCase();
+            document.querySelectorAll('#users-table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(v)?'':'none');
         };
 
-        window.deleteUser = async (id) => {
-            if(confirm("¿Eliminar usuario?")) await deleteDoc(doc(db, 'artifacts', APP_ID, 'students', id));
-        };
-
-        // --- EXPORTAR EXCEL (CSV) ---
+        // EXCEL
         window.exportToExcel = () => {
-            if (currentAttendanceList.length === 0) return showToast("No hay datos", "error");
-            
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Nombre,ID,Fecha,Hora\n"; // Encabezados
-
-            currentAttendanceList.forEach(item => {
-                const fecha = item.dateObj.toLocaleDateString();
-                const hora = item.dateObj.toLocaleTimeString();
-                csvContent += `${item.studentName},${item.studentId},${fecha},${hora}\n`;
+            if(!attendanceData.length) return showToast("Sin datos");
+            let csv = "Nombre,ID,Fecha,Hora\n";
+            attendanceData.forEach(a => {
+                const d = a.timestamp ? a.timestamp.toDate() : new Date();
+                csv += `${a.studentName},${a.studentId},${d.toLocaleDateString()},${d.toLocaleTimeString()}\n`;
             });
-
-            const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Asistencia_${new Date().toLocaleDateString()}.csv`);
-            document.body.appendChild(link);
+            link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+            link.download = `Asistencia_${new Date().toLocaleDateString()}.csv`;
             link.click();
-            document.body.removeChild(link);
-        }
+        };
 
+        // SCANNER
         function startScanner() {
-            if(html5QrcodeScanner) return;
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (code) => {
-                if(scanCooldown) return;
-                scanCooldown = true;
-                const student = allStudents.find(s => s.id_card == code);
-                const div = document.getElementById('scan-result');
-                div.classList.remove('hidden');
-                
-                if(student) {
-                    div.innerHTML = `✅ ${student.name}`;
-                    div.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-green-100 text-green-700";
-                    await addDoc(collection(db, 'artifacts', APP_ID, 'attendance'), {
-                        studentId: code, studentName: student.name, timestamp: serverTimestamp()
-                    });
+            if(scanner) return;
+            scanner = new Html5Qrcode("reader");
+            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (code) => {
+                if(cooldown) return;
+                cooldown = true;
+                const s = allStudents.find(x => x.id_card == code);
+                const res = document.getElementById('scan-result');
+                res.classList.remove('hidden');
+                if(s) {
+                    res.innerHTML = `✅ ${s.name}`; res.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-green-100 text-green-700";
+                    await addDoc(collection(db, 'artifacts', APP_ID, 'attendance'), { studentId: code, studentName: s.name, timestamp: serverTimestamp() });
                 } else {
-                    div.innerHTML = `❌ No registrado`;
-                    div.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-red-100 text-red-700";
+                    res.innerHTML = "❌ Desconocido"; res.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-red-100 text-red-700";
                 }
-                setTimeout(() => { scanCooldown = false; div.classList.add('hidden'); }, 2000);
+                setTimeout(() => { cooldown = false; res.classList.add('hidden'); }, 2000);
             });
         }
-        function stopScanner() { if(html5QrcodeScanner) { html5QrcodeScanner.stop(); html5QrcodeScanner = null; } }
+        function stopScanner() { if(scanner) { scanner.stop(); scanner = null; } }
 
-        function showToast(msg, type="info") {
+        function showToast(m) {
             const t = document.getElementById('toast');
-            document.getElementById('toast-message').innerText = msg;
-            const icon = document.getElementById('toast-icon');
-            icon.className = type === 'error' ? "fas fa-times-circle text-red-400" : "fas fa-check-circle text-green-400";
-            t.classList.remove('hidden');
-            setTimeout(() => t.classList.add('hidden'), 3000);
+            document.getElementById('toast-message').innerText = m;
+            t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 2000);
         }
     </script>
 </body>
-</html>                           
-                        
-            
-        
+</html>                                          
