@@ -1,5 +1,13 @@
-     <!DOCTYPE html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es" 
+    <!-- CONFIGURACIÓN DE FIREBASE EXTRAÍDA DEL JAVASCRIPT para mayor seguridad -->
+    <!-- ESTOS ATRIBUTOS CONTIENEN TU CONFIGURACIÓN DE FIREBASE Y SON LA CLAVE DE LA CONEXIÓN -->
+    data-api-key="AIzaSyBo9YlpqRx04DmnGEZ7sw5M07AGyC7eRG4"
+    data-auth-domain="app-asistecia-qr.firebaseapp.com"
+    data-project-id="app-asistecia-qr"
+    data-storage-bucket="app-asistecia-qr.firebasestorage.app"
+    data-messaging-sender-id="1001987551868"
+    data-app-id="1:1001987551868:web:f1d409d7cfaf962ea90ff9">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -291,23 +299,19 @@
     
     <!-- Script de la Aplicación -->
     <script>
-        // Activar el modo debug para que Firebase reporte cualquier error en la consola.
-        // Esto es CLAVE para la depuración móvil.
-        // NOTA: setLogLevel('debug') solo existe si la librería ya cargó.
-        // firebase.firestore.setLogLevel('debug'); // Removido para evitar error de inicialización
-
         // ===================================================================================
-        // === [1] CONFIGURACIÓN DE FIREBASE (INTEGRADO Y FINALIZADO) ========================
+        // === [1] CONFIGURACIÓN DE FIREBASE (Lectura de atributos HTML) =====================
         // ===================================================================================
-        // ESTA ES TU CONFIGURACIÓN
+        const html = document.documentElement;
+        
+        // Objeto de configuración construido a partir de los atributos data- en la etiqueta <html>
         const firebaseConfig = {
-            apiKey: "AIzaSyBo9YlpqRx04DmnGEZ7sw5M07AGyC7eRG4", 
-            authDomain: "app-asistecia-qr.firebaseapp.com",
-            projectId: "app-asistecia-qr",
-            storageBucket: "app-asistecia-qr.firebasestorage.app",
-            messagingSenderId: "1001987551868",
-            appId: "1:1001987551868:web:f1d409d7cfaf962ea90ff9",
-            measurementId: "G-FNR6BXHPC3"
+            apiKey: html.getAttribute('data-api-key'), 
+            authDomain: html.getAttribute('data-auth-domain'),
+            projectId: html.getAttribute('data-project-id'),
+            storageBucket: html.getAttribute('data-storage-bucket'),
+            messagingSenderId: html.getAttribute('data-messaging-sender-id'),
+            appId: html.getAttribute('data-app-id')
         };
         
         // Inicialización de Firebase
@@ -315,11 +319,13 @@
         const { getAuth, signInAnonymously, onAuthStateChanged } = firebase.auth;
         const { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, where, setLogLevel } = firebase.firestore;
         
+        // Inicializar la aplicación de Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         
         // Activación de logs de Firestore (Necesario para debuggear problemas de conexión/reglas)
+        // Esto ayudará a ver si hay un error 403 (Permiso denegado)
         setLogLevel('debug');
 
         let globalCarnets = []; // Lista global de carnets para la búsqueda
@@ -345,9 +351,9 @@
                 // Si las credenciales JS son correctas, autenticamos anónimamente en Firebase
                 loginErrorMessage.textContent = "Intentando conectar con la nube...";
                 try {
-                    // Aquí se produce el intento de conexión que antes fallaba
+                    // Intentar iniciar sesión anónimamente
                     await signInAnonymously(auth);
-                    // onAuthStateChanged manejará la transición de la UI si tiene éxito
+                    // onAuthStateChanged se dispara si tiene éxito
                 } catch (error) {
                     console.error("Error en la autenticación de Firebase:", error);
                     loginErrorMessage.textContent = "Error de conexión con la nube. Revisa la consola para más detalles.";
@@ -393,7 +399,6 @@
                 globalCarnets = carnets; // Actualizar lista global para búsqueda
             }, (error) => {
                 console.error("Error al escuchar carnets (Reglas o Conexión):", error);
-                // No usamos alert() aquí, pero el log de debug ayudará a ver el error 403 (Reglas)
             });
             
             // 2. Escuchar Asistencia (Reporte Histórico)
@@ -845,7 +850,4 @@
 
     </script>
 </body>
-</html>                                                    e.preventDefault();
-                                            
-        
-        
+</html>
