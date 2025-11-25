@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asistencia V1 Final</title>
+    <title>Asistencia V1.1</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -20,7 +20,7 @@
         .tab-content { display: none; height: 100%; overflow-y: auto; padding-bottom: 120px; }
         .tab-content.active { display: block; }
 
-        /* ESTILOS DEL CARNET (Diseño Maestro) */
+        /* ESTILOS DEL CARNET */
         .master-card {
             width: 320px; height: 540px; background: white; position: relative;
             border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -44,7 +44,7 @@
                 <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-qrcode text-3xl text-white"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800">Acceso V1</h1>
+                <h1 class="text-2xl font-bold text-gray-800">Acceso V1.1</h1>
             </div>
             <form id="login-form" class="space-y-4">
                 <input type="text" id="username" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none" placeholder="Usuario">
@@ -58,7 +58,7 @@
 
     <div id="app-view" class="hidden flex-col h-full w-full">
         <header class="bg-white border-b px-4 py-3 flex justify-between items-center z-20 shadow-sm shrink-0">
-            <h1 class="font-bold text-gray-800">Asistencia V1 Final</h1>
+            <h1 class="font-bold text-gray-800">Asistencia V1.1</h1>
             <button onclick="logout()" class="text-gray-400"><i class="fas fa-power-off"></i></button>
         </header>
 
@@ -69,7 +69,9 @@
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                         <div class="flex justify-between items-center mb-4 border-b pb-2">
                             <h2 class="text-sm font-bold text-gray-700">Nuevo Usuario</h2>
-                            <span id="badge-users" class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-full">Total: 0</span>
+                            <button onclick="resetForm()" class="bg-red-50 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-full border border-red-100 hover:bg-red-100 transition flex items-center gap-1">
+                                <i class="fas fa-eraser"></i> Limpiar Todo
+                            </button>
                         </div>
                         <form id="carnet-form" class="space-y-3">
                             <div class="grid grid-cols-2 gap-3">
@@ -85,8 +87,8 @@
                                 <input type="text" id="inp-residence" class="p-2 border rounded bg-gray-50 text-sm" placeholder="Sede">
                                 <input type="file" id="inp-photo" accept="image/*" class="text-xs text-gray-500">
                             </div>
-                            <button type="button" onclick="updatePreview()" class="w-full bg-gray-100 text-gray-600 py-2 rounded font-bold text-xs mt-2 border">
-                                <i class="fas fa-eye mr-1"></i> Previsualizar
+                            <button type="button" onclick="updatePreview()" class="w-full bg-blue-50 text-blue-600 py-2 rounded font-bold text-xs mt-2 border border-blue-100 hover:bg-blue-100">
+                                <i class="fas fa-eye mr-1"></i> Previsualizar Carnet
                             </button>
                         </form>
                     </div>
@@ -129,8 +131,11 @@
             <div id="tab-gestionar" class="tab-content">
                 <div class="max-w-xl mx-auto p-4">
                     <div class="bg-white rounded-xl shadow-sm border p-4">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="font-bold text-gray-700">Base de Datos</h2>
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <div>
+                                <h2 class="font-bold text-gray-700">Base de Datos</h2>
+                                <span id="badge-users" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Total: 0</span>
+                            </div>
                             <input type="text" id="search-input" onkeyup="filterUsers()" placeholder="Buscar..." class="pl-2 border rounded py-1 text-xs w-32 bg-gray-50">
                         </div>
                         <div class="overflow-x-auto">
@@ -144,6 +149,13 @@
 
             <div id="tab-asistencia" class="tab-content">
                 <div class="max-w-md mx-auto p-4 space-y-4">
+                    <div class="bg-white rounded-xl shadow border p-3 flex gap-2 items-center">
+                        <input type="number" id="manual-id" placeholder="Ingresar ID Manual" class="flex-1 p-2 border rounded text-sm text-center outline-none focus:border-blue-500">
+                        <button onclick="manualAttendance()" class="bg-gray-800 text-white px-4 py-2 rounded text-xs font-bold whitespace-nowrap active:scale-95 transition">
+                            <i class="fas fa-check"></i> Registrar
+                        </button>
+                    </div>
+
                     <div class="bg-white rounded-xl shadow border p-4">
                         <div id="reader" class="w-full h-64 bg-black rounded-lg overflow-hidden"></div>
                         <div id="scan-result" class="hidden mt-2 p-2 rounded text-center font-bold text-sm"></div>
@@ -155,7 +167,7 @@
                                 <h3 class="font-bold text-xs text-gray-700 uppercase">Hoy</h3>
                                 <span id="badge-attendance" class="text-[10px] text-green-600 font-bold">Registros: 0</span>
                             </div>
-                            <button onclick="exportToExcel()" class="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1">
+                            <button onclick="exportToExcel()" class="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1 hover:bg-green-200 transition">
                                 <i class="fas fa-file-excel"></i> Excel
                             </button>
                         </div>
@@ -192,7 +204,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // --- AQUÍ ESTÁ EL REINICIO A V1 ---
+        // MANTENEMOS ID PARA NO PERDER DATOS
         const APP_ID = "app-v1-final"; 
 
         let allStudents = [];
@@ -207,7 +219,6 @@
             loadData();
         });
 
-        // LOGIN
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             if(document.getElementById('username').value==='admin' && document.getElementById('password').value==='1234') {
@@ -228,7 +239,7 @@
             if(id === 'tab-asistencia') startScanner(); else stopScanner();
         };
 
-        // CARNET & FOTOS
+        // --- GESTIÓN DE CARNET ---
         document.getElementById('inp-photo').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if(file) {
@@ -262,6 +273,18 @@
             document.getElementById('card-residence').innerText = document.getElementById('inp-residence').value || "Sede";
             document.getElementById('card-qrcode').innerHTML = "";
             new QRCode(document.getElementById('card-qrcode'), { text: id, width: 90, height: 90, colorDark: "#1d4ed8", correctLevel: QRCode.CorrectLevel.H });
+        };
+
+        // --- FUNCIÓN LIMPIAR DATOS ---
+        window.resetForm = () => {
+            document.getElementById('carnet-form').reset();
+            photoBase64 = "";
+            // Imagen por defecto
+            document.getElementById('card-img').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' class='h-full w-full text-gray-300' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z' /%3E%3C/svg%3E";
+            document.getElementById('card-name').innerText = "Nombre Usuario";
+            document.getElementById('card-id').innerText = "-";
+            document.getElementById('card-qrcode').innerHTML = "";
+            showToast("Formulario limpio");
         };
 
         window.saveStudentToDB = async () => {
@@ -306,14 +329,14 @@
             win.document.close();
         };
 
-        // DATOS & CONTADORES
+        // DATOS
         function loadData() {
-            // Estudiantes
             onSnapshot(collection(db, 'artifacts', APP_ID, 'students'), (snap) => {
                 allStudents = [];
                 const tb = document.getElementById('users-table-body');
                 tb.innerHTML = "";
-                document.getElementById('badge-users').innerText = `Total: ${snap.size}`; // CONTADOR
+                // CONTADOR EN GESTOR
+                document.getElementById('badge-users').innerText = `Total: ${snap.size}`; 
                 
                 if(snap.empty) tb.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">Sin datos</td></tr>';
                 snap.forEach(d => {
@@ -323,12 +346,11 @@
                 });
             });
 
-            // Asistencia
             onSnapshot(query(collection(db, 'artifacts', APP_ID, 'attendance'), orderBy('timestamp', 'desc'), limit(100)), (snap) => {
                 const list = document.getElementById('attendance-list');
                 list.innerHTML = "";
                 attendanceData = [];
-                document.getElementById('badge-attendance').innerText = `Registros: ${snap.size}`; // CONTADOR
+                document.getElementById('badge-attendance').innerText = `Registros: ${snap.size}`;
                 
                 snap.forEach(d => {
                     const a = d.data();
@@ -355,7 +377,6 @@
             document.querySelectorAll('#users-table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(v)?'':'none');
         };
 
-        // EXCEL
         window.exportToExcel = () => {
             if(!attendanceData.length) return showToast("Sin datos");
             let csv = "Nombre,ID,Fecha,Hora\n";
@@ -369,26 +390,35 @@
             link.click();
         };
 
-        // SCANNER
+        // SCANNER & MANUAL
         function startScanner() {
             if(scanner) return;
             scanner = new Html5Qrcode("reader");
-            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (code) => {
-                if(cooldown) return;
-                cooldown = true;
-                const s = allStudents.find(x => x.id_card == code);
-                const res = document.getElementById('scan-result');
-                res.classList.remove('hidden');
-                if(s) {
-                    res.innerHTML = `✅ ${s.name}`; res.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-green-100 text-green-700";
-                    await addDoc(collection(db, 'artifacts', APP_ID, 'attendance'), { studentId: code, studentName: s.name, timestamp: serverTimestamp() });
-                } else {
-                    res.innerHTML = "❌ Desconocido"; res.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-red-100 text-red-700";
-                }
-                setTimeout(() => { cooldown = false; res.classList.add('hidden'); }, 2000);
-            });
+            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (code) => registerAttendance(code));
         }
         function stopScanner() { if(scanner) { scanner.stop(); scanner = null; } }
+
+        window.manualAttendance = () => {
+            const id = document.getElementById('manual-id').value;
+            if(!id) return showToast("Ingrese un ID");
+            registerAttendance(id);
+            document.getElementById('manual-id').value = ""; // Limpiar campo
+        }
+
+        async function registerAttendance(code) {
+            if(cooldown) return;
+            cooldown = true;
+            const s = allStudents.find(x => x.id_card == code);
+            const res = document.getElementById('scan-result');
+            res.classList.remove('hidden');
+            if(s) {
+                res.innerHTML = `✅ ${s.name}`; res.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-green-100 text-green-700";
+                await addDoc(collection(db, 'artifacts', APP_ID, 'attendance'), { studentId: code, studentName: s.name, timestamp: serverTimestamp() });
+            } else {
+                res.innerHTML = "❌ ID No Encontrado"; res.className = "mt-2 p-2 rounded text-center font-bold text-sm bg-red-100 text-red-700";
+            }
+            setTimeout(() => { cooldown = false; res.classList.add('hidden'); }, 2000);
+        }
 
         function showToast(m) {
             const t = document.getElementById('toast');
@@ -397,4 +427,4 @@
         }
     </script>
 </body>
-</html>                                          
+</html>                                                               
